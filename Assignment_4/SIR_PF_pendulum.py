@@ -1,10 +1,10 @@
-# %% imports
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.core.numeric import indices
 import scipy.stats
 
 rng = np.random.default_rng()
-# %% trajectory generation
+# trajectory generation
 # scenario parameters
 x0 = np.array([np.pi / 2, -np.pi / 100])
 Ts = 0.05
@@ -38,6 +38,7 @@ def pendulum_dynamics_discrete(xk, vk, Ts, a, d=0):
     return xkp1
 
 
+
 # sample a trajectory
 x = np.zeros((K, 2))
 x[0] = x0
@@ -56,7 +57,7 @@ axs1[1].plot(x[:, 1])
 axs1[1].set_xlabel("Time step")
 axs1[1].set_ylabel(r"$\dot \theta$")
 
-# %% measurement generation
+# measurement generation
 
 # constants
 Ld = 4
@@ -86,20 +87,19 @@ ax2.plot(Z)
 ax2.set_xlabel("Time step")
 ax2.set_ylabel("z")
 
-# %% Task: Estimate using a particle filter
+# Task: Estimate using a particle filter
 
 # number of particles to use
-N = # TODO
+N =  200 # around 100-200 seems to be fine, best relative degeneracy with 100
 
 # initialize particles, pretend you do not know where the pendulum starts
 px = np.array([
-    rng. # TODO,
-    rng. # TODO
+    np.random.normal(-np.pi, np.pi, N),
+    np.random.uniform(size=N)*np.pi/2
     ]).T
 
 # initial weights
-w = # TODO
-
+w = np.ones(N)/N # Equal weight, with sum 1
 # allocate some space for resampling particles
 pxn = np.zeros_like(px)
 
@@ -126,22 +126,36 @@ for k in range(K):
     print(f"k = {k}")
     # weight update
     for n in range(N):
-        w[n] =  # TODO, hint: PF_measurement_distribution.pdf
-    w = # TODO: normalize
+        dz = Z[k] -h(px[n],Ld, l, Ll) # Measurement
+        w[n] = PF_measurement_distribution.pdf(dz)# hint: PF_measurement_distribution.pdf
+    w = w + eps # Some round off stuff, thx studass
+    w = w / np.sum(w) # Normalize
+
 
     # resample
-    # TODO: some pre calculations?
     i = 0
+    noise = rng.random((1,1))/N
+    cumweights = np.cumsum(w)
+    u = np.zeros(N)
     for n in range(N):
+        u = n/N + noise
+        while u > cumweights[i]:
+            i += 1
         # find a particle 'i' to pick
         # algorithm in the book, but there are other options as well
         pxn[n] = px[i]
+    np.random.shuffle(pxn) # shuffle
 
     # trajecory sample prediction
     for n in range(n):
-        vkn = # TODO: process noise, hint: PF_dynamic_distribution.rvs
-        px[n] = # TODO: particle prediction
+        # process noise, hint: PF_dynamic_distribution.rvs
+        vkn = PF_dynamic_distribution.rvs() # just random vals drawn from dist
+        px[n] = pendulum_dynamics_discrete(pxn[n], vkn, Ts, a) # particle prediction
 
+    N_eff = 1 / np.sum(w**2)
+    print(f"Degeneracy = {N_eff}")
+    w = np.ones(N)/N # reset weigths
+    
     # plot
     sch_particles.set_offsets(np.c_[l * np.sin(pxn[:, 0]), -l * np.cos(pxn[:, 0])])
     sch_true.set_offsets(np.c_[l * np.sin(x[k, 0]), -l * np.cos(x[k, 0])])
@@ -151,4 +165,3 @@ for k in range(K):
     plt.waitforbuttonpress(plotpause)
 
 plt.waitforbuttonpress()
-# %%

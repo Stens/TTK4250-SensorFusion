@@ -4,13 +4,14 @@ import scipy
 import scipy.io
 import scipy.stats
 import matplotlib
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 
 import dynamicmodels
 import measurementmodels
 import imm
 import ekf
+from gaussparams import GaussParams
 
 # %% plot config check and style setup
 
@@ -48,9 +49,14 @@ except Exception as e:
 
 # %% load data
 use_pregen = True
+use_ekf_data = True
+if use_ekf_data:
+    path = "data_for_ekf.mat"
+else:
+    path = "data_for_imm.mat"
 # you can generate your own data if set to false
 if use_pregen:
-    data_filename = "data_for_imm.mat"
+    data_filename = path
     loaded_data = scipy.io.loadmat(data_filename)
     Z = loaded_data["Z"].T
     K = loaded_data["K"].item()
@@ -72,16 +78,14 @@ else:
 fig1, ax1 = plt.subplots(num=1, clear=True)
 ax1.plot(*Xgt.T[:2])
 ax1.scatter(*Z.T[:2])
-
-
 # %% tune single filters
-# TODO
-sigma_z = 1
-sigma_a_CT = 1
-sigma_omega = 1
+sigma_z = 8.7
+sigma_a_CT = 0.2
+sigma_a_CV = 5.5
+sigma_omega = 5e-6 * np.pi
 
-# TODO
-init_state = {"mean": [None], "cov": np.diag([None]) ** 2}
+init_state = {"mean": np.array(Xgt[0,:]), "cov": np.diag([1,1,1,1,0.005]) ** 2}
+init_state = GaussParams(init_state["mean"], init_state["cov"])
 
 measurement_model = measurementmodels.CartesianPosition(
     sigma_z, state_dim=5
@@ -92,13 +96,13 @@ CT = dynamicmodels.ConstantTurnrate(sigma_a_CT, sigma_omega)
 # make models
 filters = []
 filters.append(ekf.EKF(CV, measurement_model))
-filters.append(None) # TODO, so you understand what is going on here
+filters.append(ekf.EKF(CT, measurement_model)) #, so you understand what is going on here
 
 pred = []
 upd = []
 stats = []
 for ekf_filter in filters:
-    ekfpred_list, ekfupd_list = # TODO
+    ekfpred_list, ekfupd_list = ekf_filter.estimate_sequence(Z, init_state, Ts)
     stats.append(
         ekf_filter.performance_stats_sequence(
             K=K,
@@ -106,7 +110,7 @@ for ekf_filter in filters:
             ekfpred_list=ekfpred_list,
             ekfupd_list=ekfupd_list,
             X_true=Xgt,
-            NEES_idx=ekf_filter.dynamic_model._all_idx,  # HACK?
+            # NEES_idx=ekf_filter.dynamic_model._all_idx,  # HACK?
             norm_idxs=[[0, 1], [2, 3]],
             norms=[2, 2],
         )
@@ -125,9 +129,11 @@ RMSE_upd = np.sqrt((err_upd ** 2).mean(axis=1)) # same as above
 
 # measurement consistency
 NIS = np.array([st["NIS"] for st in stats])
-ANIS = # TODO, hint mean
-CINIS = # TODO, hint scipy.stats.chi2.interval
-CIANIS = # TODO, hint [...].inteval
+ANIS =  NIS.mean(axis=0) # TODO, hint mean
+df = 2
+confprob = 0.95  # TODO number to use for confidence interval
+CINIS = np.array(scipy.stats.chi2.interval(confprob, K*df))/K
+CIANIS =  None # TODO, hint [...].inteval ?????
 print(f"ANIS={ANIS} with CIANIS={CIANIS}")
 
 
@@ -161,44 +167,46 @@ axs3[2].plot(np.arange(K) * Ts, err_upd[1, :, 1])
 axs3[2].set_title("vel error")
 
 # %% tune IMM by only looking at the measurements
-# TODO
-sigma_z = 1
-sigma_a_CV = 1
-sigma_a_CT = 1
-sigma_omega = 1
-PI = np.array([[1, 0], [0, 1]])  # TODO
+sigma_z = 8.7
+sigma_a_CT = 2.2
+sigma_a_CVlow = 2.1
+sigma_a_CVhigh = 8
+sigma_omega = 3e-4 * np.pi
+
+PI = np.array([[1, 0.0, 0], [0.0, 1, 0], [0,0,1]])  
 # Optional sanity check
 assert np.allclose(PI.sum(axis=1), 1), "rows of PI must sum to 1" # RIGHT?? yes...
 
 # make model
 measurement_model = measurementmodels.CartesianPosition(sigma_z, state_dim=5)
-CV = dynamicmodels.WhitenoiseAccelleration(sigma_a_CV, n=5)
+CV = dynamicmodels.WhitenoiseAccelleration(sigma_a_CVlow, n=5)
+CVh = dynamicmodels.WhitenoiseAccelleration(sigma_a_CVhigh, n=5)
 CT = dynamicmodels.ConstantTurnrate(sigma_a_CT, sigma_omega)
 ekf_filters = []
-# TODO fill in you filters
-# ekf_filters.append(...)
-imm_filter = None # TODO
+ekf_filters.append(ekf.EKF(CV, measurement_model))
+ekf_filters.append(ekf.EKF(CVh, measurement_model)) 
+ekf_filters.append(ekf.EKF(CT, measurement_model))
 
-init_state = { # TODO
-    "weight": np.array([0.5, 0.5]),  # Mode probs: optional
-    "mean": [0, 0, 0, 0, 0],
-    "cov": np.diag([1, 1, 1, 1, 1]) ** 2,
+init_state = {
+    "weight": np.array([0.1, 0.4, 0.3]),  # Mode probs: optional
+    "mean": Xgt[0,:],
+    "cov": np.diag([1, 1, 1, 1, 0.005]) ** 2,
 }
 
-
-imm_preds, imm_upds, imm_ests = # TODO: perform estimate
+imm_filter = imm.IMM(filters=ekf_filters, PI=PI)
+imm_preds, imm_upds, imm_ests = imm_filter.estimate_sequence(Z, init_state, Ts) 
 
 # extract some data
-x_est = np.array([est.mean for est in imm_ests])
+x_est = np.array([est[0] for est in imm_ests])
 prob_est = np.array([upds.weights for upds in imm_upds])
 
 # consistency
 NISes_comb = [imm_filter.NISes(zk, pred_k) for zk, pred_k in zip(Z, imm_preds)]
 NIS = np.array([n[0] for n in NISes_comb])
 NISes = np.array([n[1] for n in NISes_comb])
-ANIS = # TODO
-CINIS = # TODO
-CIANIS = # TODO
+ANIS = np.mean(NIS, axis=0)
+# CINIS =  None
+CIANIS = None# ????
 print(f"ANIS={ANIS} with CIANIS={CIANIS}")
 
 # plot
@@ -219,45 +227,48 @@ for ci, cilbl in zip(CINIS, CI_LABELS):
     axs4[1, 1].plot([1, K * Ts], np.ones(2) * ci, "--r", label=cilbl)
 axs4[1, 1].text(K * Ts * 1.1, 1, f"{ratio_in_CI} inside CI", rotation=90)
 axs4[1, 1].legend()
-
+plt.show()
 # %% tune IMM by looking at ground truth
-# TODO
-sigma_z = 1
-sigma_a_CV = 1
-sigma_a_CT = 1
-sigma_omega = 1
-PI = np.array([[1, 0], [0, 1]])
+sigma_z = 8.7
+sigma_a_CT = 2.2
+sigma_a_CVlow = 2.1
+sigma_a_CVhigh = 8
+sigma_omega = 3e-4 * np.pi
+
+PI = np.array([[1, 0.0, 0], [0.0, 1, 0], [0,0,1]])  
 # Optional sanity check
 assert np.allclose(PI.sum(axis=1), 1), "rows of PI must sum to 1"
 
 # make model
 measurement_model = measurementmodels.CartesianPosition(sigma_z, state_dim=5)
-CV = dynamicmodels.WhitenoiseAccelleration(sigma_a_CV, n=5)
+CV = dynamicmodels.WhitenoiseAccelleration(sigma_a_CVlow, n=5)
+CVh = dynamicmodels.WhitenoiseAccelleration(sigma_a_CVhigh, n=5)
 CT = dynamicmodels.ConstantTurnrate(sigma_a_CT, sigma_omega)
 ekf_filters = []
-# TODO: add and create the filters
+ekf_filters.append(ekf.EKF(CV, measurement_model))
+ekf_filters.append(ekf.EKF(CVh, measurement_model)) 
+ekf_filters.append(ekf.EKF(CT, measurement_model))
 # ekf_filters.append ...
-imm_filter = None # TODO
-
 init_state = { # TODO, pick something reasonoable
-    "weight": np.array([0.5, 0.5]),  # Mode probs: optional
-    "mean": [0, 0, 0, 0, 0],
+    "weight": np.array([0.8, 0.2]),  # Mode probs: optional
+    "mean": Xgt[0,:],
     "cov": np.diag([1, 1, 1, 1, 1]) ** 2,
 }
 
+imm_filter = imm.IMM(filters=ekf_filters, PI=PI)
+imm_preds, imm_upds, imm_ests = imm_filter.estimate_sequence(Z, init_state, Ts) 
 
-imm_preds, imm_upds, imm_ests = # TODO
 
 # extract some data
-x_est = np.array([est.mean for est in imm_ests])
+x_est = np.array([est[0] for est in imm_ests])
 mode_prob = np.array([upds.weights for upds in imm_upds])
 
 # consistency: NIS
 NISes_comb = (imm_filter.NISes(zk, pred_k) for zk, pred_k in zip(Z, imm_preds))
 NIS, NISes = [np.array(n) for n in zip(*NISes_comb)]
-ANIS = # TODO
-CINIS = # TODO
-CIANIS = # TODO
+ANIS = np.mean(NIS, axis=0)
+# CINIS = None
+CIANIS = None # ????
 
 # consistency: NEES
 NEESes_comb_pred = (
@@ -265,15 +276,17 @@ NEESes_comb_pred = (
     for pred_k, x_true in zip(imm_preds, Xgt)
 )
 NEES_pred, NEESes_pred = (np.array(n) for n in zip(*NEESes_comb_pred))
-ANEES_pred = # TODO
+ANEES_pred = np.mean(NEES_pred, axis=0)
 NEESes_comb_upd = (
     imm_filter.NEESes(upd_k, x_true, idx=np.arange(4))
     for upd_k, x_true in zip(imm_upds, Xgt)
 )
 NEES_upd, NEESes_upd = (np.array(n) for n in zip(*NEESes_comb_upd))
-ANEES_upd = # TODO
-CINEES = # TODO
-CIANEES = # TODO
+ANEES_upd = np.mean(NEES_upd, axis=0)
+df = 5
+confprob = 0.9  # TODO
+CINEES = np.array(scipy.stats.chi2.interval(confprob, K*df))/K
+CIANEES = None# TODO
 print(f"ANIS={ANIS} and CIANEES={CIANIS}")
 print(f"ANEES_upd={ANEES_upd}, and CIANEES={CIANEES}")
 
@@ -286,18 +299,18 @@ pos_RMSE = np.sqrt(
 vel_RMSE = np.sqrt(
     np.mean(vel_err ** 2)
 )  # not true RMSE (which is over monte carlo simulations)
-pos_peak_deviation = # TODO
-vel_peak_deviation = # TODO
+pos_peak_deviation = None # TODO
+vel_peak_deviation = None# TODO
 
 # plot
-rmsestr = ", ".join(f"{num:.3f}" for num in (pos_RMSE, vel_RMSE))
-devstr = ", ".join(f"{num:.3f}" for num in (pos_peak_deviation, vel_peak_deviation))
+# rmsestr = ", ".join(f"{num:.3f}" for num in (pos_RMSE, vel_RMSE))
+# devstr = ", ".join(f"{num:.3f}" for num in (pos_peak_deviation, vel_peak_deviation))
 
 fig5, axs5 = plt.subplots(2, 2, num=5, clear=True)
 axs5[0, 0].plot(*x_est.T[:2], label="est", color="C0")
 axs5[0, 0].scatter(*Z.T, label="z", color="C1")
 axs5[0, 0].legend()
-axs5[0, 0].set_title(f"RMSE(p, v) = {rmsestr}\npeak_dev(p, v) = {devstr}.0")
+# axs5[0, 0].set_title(f"RMSE(p, v) = {rmsestr}\npeak_dev(p, v) = {devstr}.0")
 axs5[0, 1].plot(np.arange(K) * Ts, x_est[:, 4], label=r"$\hat{\omega}$")
 axs5[0, 1].plot(np.arange(K) * Ts, Xgt[:, 4], label=r"$\omega$")
 axs5[0, 1].legend()
@@ -325,17 +338,19 @@ axs6[1, 0].plot(np.arange(K) * Ts, NISes)
 ratio_in_CI = np.mean(np.less_equal(CINIS[0], NIS) * np.less_equal(NIS, CINIS[1]))
 axs6[1, 0].set_ylabel(f"NIS: {ratio_in_CI}% in CI")
 axs6[1, 0].plot([0, Ts * (K - 1)], np.repeat(CINIS[None], 2, 0), "r--")
-# axs6[1, 0].text(K * Ts * 1.1, -2, f"{ratio_in_CI}% inside CI", rotation=90)
+axs6[1, 0].text(K * Ts * 1.1, -2, f"{ratio_in_CI}% inside CI", rotation=90)
 
 axs6[1, 1].plot(np.arange(K) * Ts, NEES_pred)
 axs6[1, 1].plot(np.arange(K) * Ts, NEES_upd)
-# axs6[1, 1].plot(np.arange(K) * Ts, NISes)
+axs6[1, 1].plot(np.arange(K) * Ts, NISes)
 ratio_in_CI_nees = np.mean(
     np.less_equal(CINEES[0], NEES_upd) * np.less_equal(NEES_upd, CINEES[1])
 )
-# axs6[1, 1].text(K * Ts * 1.1, -2, f"{ratio_in_CI_nees}% inside CI", rotation=90)
+axs6[1, 1].text(K * Ts * 1.1, -2, f"{ratio_in_CI_nees}% inside CI", rotation=90)
 axs6[1, 1].yaxis.set_label_position("right")
 axs6[1, 1].set_ylabel(f"NEES: {ratio_in_CI_nees}% in CI")
 
 axs6[1, 1].plot([0, Ts * (K - 1)], np.repeat(CINEES[None], 2, 0), "r--")
-# axs6[1, 1].text(K * Ts * 1.1, -2, f"{ratio_in_CI_nees}% inside CI", rotation=90)
+axs6[1, 1].text(K * Ts * 1.1, -2, f"{ratio_in_CI_nees}% inside CI", rotation=90)
+plt.show()
+# %%

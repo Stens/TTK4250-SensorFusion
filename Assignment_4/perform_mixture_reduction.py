@@ -10,7 +10,7 @@ mus = np.array([1, 1, 1]).reshape(3, 1)
 sigmas = np.array([1, 1, 1]).reshape(
     3, 1, 1
 )  # note std and not var as in gaussian_mixture_moments
-w = np.array([1, 1, 1])
+w = np.array([1/3, 1/3, 1/3])
 w = w.ravel() / np.sum(w)
 assert np.allclose(w.sum(), 1), "weights must sum to one"
 
@@ -65,5 +65,7 @@ ax2.legend(loc=(1.05, 0))
 print(mucomb)
 print(sigma2comb)
 sigmacomb = np.sqrt(sigma2comb)
+plt.show()
+# %%
 
 # %%

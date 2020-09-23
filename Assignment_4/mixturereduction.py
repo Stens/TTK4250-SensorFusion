@@ -1,6 +1,8 @@
 from typing import Tuple
+from matplotlib.pyplot import axis
 
 import numpy as np
+from scipy.stats.stats import weightedtau
 
 
 def gaussian_mixture_moments(
@@ -11,19 +13,18 @@ def gaussian_mixture_moments(
     np.ndarray, np.ndarray
 ]:  # the mean and covariance of of the mixture shapes ((n,), (n, n))
     """Calculate the first two moments of a Gaussian mixture"""
-
     # mean
-    mean_bar = None  # TODO: hint np.average using axis and weights argument
-
+    mean_bar = np.average(mean, axis=0, weights=w)
     # covariance
     # # internal covariance
-    cov_int = None  # TODO: hint, also an average
-
+    cov_int = np.average(cov, axis=0, weights=w)
     # # spread of means
-    # Optional calc: mean_diff =
-    cov_ext = None  # TODO: hint, also an average
-
+    l_mean = []
+    for m in mean:
+        l_mean.append(m@m.T)
+    cov_ext = np.average(l_mean, axis=0,
+                         weights=w) - mean_bar @ mean_bar.T
+    # cov_ext = np.average(mean*mean, weights=w, axis=0)- mean_bar@mean_bar.T
     # # total covariance
-    cov_bar = None  # TODO
-
+    cov_bar = cov_int + cov_ext
     return mean_bar, cov_bar
