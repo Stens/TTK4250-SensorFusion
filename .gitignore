@@ -129,3 +129,7 @@ dmypy.json
 .pyre/
 Assignment_3/.vscode/settings.json
 Assignment_3/.DS_Store
+
+
+# VScode settings
+.vscode

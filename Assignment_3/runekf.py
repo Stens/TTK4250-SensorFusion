@@ -90,8 +90,8 @@ ax2.set_ylabel('turn rate')
 # %% a: tune by hand and comment
 
 # set parameters
-sigma_a = 1.4  # TODO
-sigma_z = 0.5  # TODO
+sigma_a = 1 # TODO
+sigma_z = 1  # TODO
 
 # create the model and estimator object
 dynmod = dynamicmodels.WhitenoiseAccelleration(sigma_a)
@@ -138,11 +138,11 @@ ax3.set_title(
 # % parameters for the parameter grid
 # TODO: pick reasonable values for grid search
 # n_vals = 20  # is Ok, try lower to begin with for more speed (20*20*1000 = 400 000 KF steps)
-n_vals = 20
-sigma_a_low = 0.1 # TODO
-sigma_a_high = 2.5 # TODO
-sigma_z_low = 0.1 # TODO
-sigma_z_high = 2.5 # TODO
+n_vals = 10
+sigma_a_low = 0.01 # TODO
+sigma_a_high = 5 # TODO
+sigma_z_low = 0.01# TODO
+sigma_z_high = 5 # TODO
 
 # % set the grid on logscale(not mandatory)
 sigma_a_list = np.logspace(
@@ -173,23 +173,14 @@ for i, sigma_a in enumerate(sigma_a_list):
 
 # TODO, remember to use axis argument, see eg. stats_array['dists_pred'].shape
 
-RMSE_pred = np.empty((n_vals, n_vals, 2)) # TODO
-RMSE_upd =  np.empty((n_vals, n_vals, 2))  # TODO
-ANEES_pred =  np.empty((n_vals, n_vals))  # TODO mean of NEES over time
-ANEES_upd =  np.empty((n_vals, n_vals))  # TODO
-ANIS =  np.empty((n_vals, n_vals))  # TODO mean of NIS over time
-
-for i in range(len(sigma_a_list)):
-    for j in range(len(sigma_z_list)):
-        stats = stats_array[i,j]
-        RMSE_pred[i,j] = np.sqrt(np.mean((stats['dists_pred'])**2, axis=0))
-        RMSE_upd[i, j] = np.sqrt(np.mean((stats['dists_upd'])**2,axis=0))
-        ANEES_pred[i,j] = np.mean(stats['NEESpred'])
-        ANEES_upd[i,j] = np.mean(stats['NEESupd'])
-        ANIS[i,j] = np.mean(stats['NIS'])
+RMSE_pred = np.sqrt((stats_array['dists_pred']**2).mean(axis=2))
+RMSE_upd = np.sqrt((stats_array['dists_upd']**2).mean(axis=2))
+ANEES_pred = stats_array['NEESpred'].mean(axis=2)
+ANEES_upd = stats_array['NEESupd'].mean(axis=2)
+ANIS = stats_array['NIS'].mean(axis=2)
 # %% find confidence regions for NIS and plot
 df = 2
-confprob = 0.05  # TODO number to use for confidence interval
+confprob = 0.9  # TODO number to use for confidence interval
 CINIS = np.array(scipy.stats.chi2.interval(confprob, K*df))/K# TODO confidence intervall for NIS, hint: scipy.stats.chi2.interval
 print(CINIS)
 
@@ -207,7 +198,7 @@ ax4.set_zlim(0, 10)
 ax4.view_init(30, 20)
 # %% find confidence regions for NEES and plot
 df = 4
-confprob = 0.05  # TODO
+confprob = 0.9  # TODO
 CINEES = np.array(scipy.stats.chi2.interval(confprob, K*df))/K  # TODO, not NIS now, but very similar
 print(CINEES)
 

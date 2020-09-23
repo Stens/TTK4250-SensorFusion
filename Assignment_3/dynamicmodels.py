@@ -84,5 +84,5 @@ class WhitenoiseAccelleration:
           [0, (Ts**3)/3, 0, (Ts**2)/2],
           [(Ts**2)/2, 0, Ts, 0],
           [0, (Ts**2)/2, 0, Ts]
-        ]) * self.sigma
+        ]) * (self.sigma**2)
         return pnc_matrix # @ x
