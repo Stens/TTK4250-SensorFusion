@@ -72,4 +72,4 @@ class CartesianPosition:
         """Calculate the measurement covariance matrix at x in sensor_state having potentially received measurement z."""
         # you do not need to care about sensor_state
         # sigma is available as self.sigma, and @dataclass makes it available in the init class constructor
-        return (np.eye(4)*self.sigma ) # @ x
+        return (np.eye(4)*(self.sigma**2) ) # @ x
