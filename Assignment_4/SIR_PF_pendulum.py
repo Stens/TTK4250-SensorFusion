@@ -147,7 +147,7 @@ for k in range(K):
     np.random.shuffle(pxn) # shuffle
 
     # trajecory sample prediction
-    for n in range(n):
+    for n in range(N):
         # process noise, hint: PF_dynamic_distribution.rvs
         vkn = PF_dynamic_distribution.rvs() # just random vals drawn from dist
         px[n] = pendulum_dynamics_discrete(pxn[n], vkn, Ts, a) # particle prediction

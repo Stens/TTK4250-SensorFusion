@@ -23,6 +23,8 @@ import scipy
 import dynamicmodels as dynmods
 import measurementmodels as measmods
 from gaussparams import GaussParams, GaussParamList
+from mixturedata import MixtureParameters
+from mixturereduction import gaussian_mixture_moments
 from singledispatchmethod import singledispatchmethod
 
 #  The EKF
@@ -52,7 +54,6 @@ class EKF:
 
         F = self.dynamic_model.F(x, Ts)
         Q = self.dynamic_model.Q(x, Ts)
-        f = self.dynamic_model.f(x, Ts)
 
         x_pred = self.dynamic_model.f(x,Ts)  # TODO
         P_pred = F@P@F.T+Q  # TODO
@@ -169,7 +170,7 @@ class EKF:
         x, P = ekfstate
 
         x_diff = x-x_true  # Optional step
-        NEES = (x_diff.T) @ P @ x  # TODO
+        NEES = (x_diff.T) @ P @ x_diff  # TODO
         return NEES
 
     def gate(self,
@@ -182,24 +183,34 @@ class EKF:
         """ Check if z is inside sqrt(gate_sized_squared)-sigma ellipse of ekfstate in sensor_state """
 
         # a function to be used in PDA and IMM-PDA
-        gated = None  # TODO in PDA exercise
+        gated = self.NIS(z=z, ekfstate=ekfstate, sensor_state=sensor_state) < gate_size_square  # TODO in PDA exercise
         return gated
 
-    def loglikelihood(self,
-                      z: np.ndarray,
-                      ekfstate: GaussParams,
-                      sensor_state: Dict[str, Any] = None
-                      ) -> float:
+    def loglikelihood(
+        self,
+        z: np.ndarray,
+        ekfstate: GaussParams,
+        sensor_state: Optional[Dict[str, Any]] = None,
+    ) -> float:
         """Calculate the log likelihood of ekfstate at z in sensor_state"""
-        # we need this function in IMM, PDA and IMM-PDA exercises
-        # not necessary for tuning in EKF exercise
+
         v, S = self.innovation(z, ekfstate, sensor_state=sensor_state)
 
-        # TODO: log likelihood, Hint: log(N(v, S))) -> NIS, la.slogdet.
-        ll = -0.5 *(self.NIS(z, ekfstate, sensor_state) + np.linalg.slogdet(2*np.pi*S))
+        cholS = la.cholesky(S, lower=True)
+
+        invcholS_v = la.solve_triangular(cholS, v, lower=True)
+        NISby2 = (invcholS_v ** 2).sum() / 2
+        # alternative self.NIS(...) /2 or v @ la.solve(S, v)/2
+
+        logdetSby2 = np.log(cholS.diagonal()).sum()
+        # alternative use la.slogdet(S)
+
+        ll = -(NISby2 + logdetSby2 + self._MLOG2PIby2)
+
+        # simplest overall alternative
+        # ll = scipy.stats.multivariate_normal.logpdf(v, cov=S)
 
         return ll
-
     @classmethod
     def estimate(cls, ekfstate: GaussParams):
         """Get the estimate from the state with its covariance. (Compatibility method)"""
@@ -351,6 +362,16 @@ class EKF:
         stats_arr = np.array([tuple(d.values()) for d in stats], dtype=dtype)
 
         return stats_arr
+
+    def reduce_mixture(
+        self, ekfstate_mixture: MixtureParameters[GaussParams]
+        ) -> GaussParams:
+        """Merge a Gaussian mixture into single mixture"""
+        w = ekfstate_mixture.weights
+        x = np.array([c.mean for c in ekfstate_mixture.components], dtype=float)
+        P = np.array([c.cov for c in ekfstate_mixture.components], dtype=float)
+        x_reduced, P_reduced = gaussian_mixture_moments(w, x, P)
+        return GaussParams(x_reduced, P_reduced)
 
 
     @singledispatchmethod

@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import numpy as np
+from numpy.core.defchararray import join
 from numpy.core.fromnumeric import shape
 from numpy.core.multiarray import where
 import numpy.linalg as la
@@ -17,16 +18,17 @@ def discrete_bayes(
 ]:  # the new marginal and conditional: shapes=((m,), (m, n))
     """Swap which discrete variable is the marginal and conditional."""
 
-    joint =  cond_pr*(np.ones(cond_pr.shape[0])@pr.T) # TODO P(X,Y) = P(Y|X)P(X) 
-    # joint = pr[:,None]*cond_pr
+    joint = pr[:,None]*cond_pr # TODO P(X,Y) = P(Y|X)P(X)
 
-    marginal = np.sum(joint, axis=1)# TODO p(X) = sum of all x for  P(X,Y)
+    marginal = np.sum(joint, axis=0)# TODO p(X) = sum of all x for  P(X,Y)
 
     # Take care of rare cases of degenerate zero marginal,
-    conditional = np.divide(joint,marginal, where=True)
+    conditional = np.divide(joint, marginal[None], where=marginal[None] > 0,
+                    out=np.repeat(pr[:, None], joint.shape[1], 1), 
+                    )
 
     # flip axes?? (n, m) -> (m, n)
-    # conditional = conditional.T
+    conditional = conditional.T
 
     # optional DEBUG
     assert np.all(
