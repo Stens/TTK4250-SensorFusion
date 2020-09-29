@@ -39,12 +39,10 @@ class CartesianPosition:
         measurement_loc = np.array([
           [1, 0, 0, 0],
           [0, 1, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
         ])
         # x[0:2] is position
         # you do not need to care about sensor_state
-        return measurement_loc # @ x
+        return measurement_loc @ x
 
     def H(self,
             x: np.ndarray,
@@ -55,8 +53,6 @@ class CartesianPosition:
         jac_measurement_loc = np.array([
           [1, 0, 0, 0],
           [0, 1, 0, 0],
-          [0, 0, 0, 0],
-          [0, 0, 0, 0]
         ])
         # x[0:2] is position
         # you do not need to care about sensor_state
@@ -72,4 +68,4 @@ class CartesianPosition:
         """Calculate the measurement covariance matrix at x in sensor_state having potentially received measurement z."""
         # you do not need to care about sensor_state
         # sigma is available as self.sigma, and @dataclass makes it available in the init class constructor
-        return (np.eye(4)*(self.sigma**2) ) # @ x
+        return (np.eye(2)*(self.sigma**2) ) # @ x

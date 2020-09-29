@@ -1,6 +1,6 @@
 # %% Imports
 from gaussparams import GaussParams
-import measurmentmodels
+import measurementmodels
 import dynamicmodels
 import ekf
 import scipy
@@ -90,12 +90,12 @@ ax2.set_ylabel('turn rate')
 # %% a: tune by hand and comment
 
 # set parameters
-sigma_a = 1 # TODO
-sigma_z = 1  # TODO
+sigma_a = 2 # TODO
+sigma_z = 3.2  # TODO
 
 # create the model and estimator object
 dynmod = dynamicmodels.WhitenoiseAccelleration(sigma_a)
-measmod = measurmentmodels.CartesianPosition(sigma_z)
+measmod = measurementmodels.CartesianPosition(sigma_z)
 ekf_filter = ekf.EKF(dynmod, measmod)
 print(ekf_filter)  # make use of the @dataclass automatic repr
 
@@ -159,7 +159,7 @@ stats_array = np.empty((n_vals, n_vals, K), dtype=dtype)
 for i, sigma_a in enumerate(sigma_a_list):
     dynmod = dynamicmodels.WhitenoiseAccelleration(sigma_a)  # TODO
     for j, sigma_z in enumerate(sigma_z_list):
-        measmod = measurmentmodels.CartesianPosition(sigma_z)  # TODO
+        measmod = measurementmodels.CartesianPosition(sigma_z)  # TODO
         ekf_filter = ekf.EKF(dynmod, measmod)  # TODO
 
         ekfpred_list, ekfupd_list = ekf_filter.estimate_sequence(Z, init_ekfstate, Ts)  # TODO

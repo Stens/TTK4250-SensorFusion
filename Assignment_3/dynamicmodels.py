@@ -53,7 +53,7 @@ class WhitenoiseAccelleration:
           [0,0,1,0],
           [0,0,0,1]
         ])
-        return transition_matrix # @ x
+        return transition_matrix  @ x
 
     def F(self,
             x: np.ndarray,
@@ -66,7 +66,7 @@ class WhitenoiseAccelleration:
           [0,0,0,0],
           [0,0,0,0]
         ])
-        return jacobian # @ x
+        return jacobian 
 
     def Q(self,
             x: np.ndarray,

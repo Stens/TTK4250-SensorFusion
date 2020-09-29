@@ -8,25 +8,23 @@ Z (capital) are mulitple measurements so that z = Z[k] at a given time step
 v is the innovation z - h(x)
 S is the innovation covariance
 """
-#  Imports
+# %% Imports
 # types
 from typing import Union, Any, Dict, Optional, List, Sequence, Tuple, Iterable
 from typing_extensions import Final
 
 # packages
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import numpy as np
 import scipy.linalg as la
+import scipy
 
 # local
 import dynamicmodels as dynmods
-import measurementmodels as measmods
+import measurmentmodels as measmods
 from gaussparams import GaussParams, GaussParamList
-from mixturedata import MixtureParameters
-from mixturereduction import gaussian_mixture_moments
-from singledispatchmethod import singledispatchmethod
 
-#  The EKF
+# %% The EKF
 
 
 @dataclass
@@ -53,8 +51,9 @@ class EKF:
 
         F = self.dynamic_model.F(x, Ts)
         Q = self.dynamic_model.Q(x, Ts)
+        f = self.dynamic_model.f(x, Ts)
 
-        x_pred = self.dynamic_model.f(x,Ts)  # TODO
+        x_pred = f@x  # TODO
         P_pred = F@P@F.T+Q  # TODO
 
         state_pred = GaussParams(x_pred, P_pred)
@@ -72,8 +71,9 @@ class EKF:
 
         x = ekfstate.mean
 
-        zbar = self.sensor_model.h(x) # TODO predicted measurement
-        v = z - zbar # TODO the innovation
+        zbar = self.sensor_model.h(x)@x  # TODO predicted measurement
+        v = z - zbar[:2]  # TODO the innovation
+        v = np.append(v,np.zeros(2))
         return v
 
     def innovation_cov(self,
@@ -86,10 +86,10 @@ class EKF:
 
         x, P = ekfstate
 
-        H = self.sensor_model.H(x, sensor_state=sensor_state)
+        h = self.sensor_model.h(x, sensor_state=sensor_state)
         R = self.sensor_model.R(x, sensor_state=sensor_state, z=z)
 
-        S = H @ P @ H.T +R  # TODO the innovation covariance
+        S = h @ P @ h.T +R  # TODO the innovation covariance
 
         return S
 
@@ -149,17 +149,15 @@ class EKF:
     def NIS(self,
             z: np.ndarray,
             ekfstate: GaussParams,
+            *,
             sensor_state: Dict[str, Any] = None,
             ) -> float:
         """Calculate the normalized innovation squared for ekfstate at z in sensor_state"""
 
         v, S = self.innovation(z, ekfstate, sensor_state=sensor_state)
 
-        cholS = la.cholesky(S, lower=True)
+        NIS = v.T@la.inv(S)@v  # TODO
 
-        invcholS_v = la.solve_triangular(cholS, v, lower=True)
-
-        NIS = (invcholS_v ** 2).sum()
         return NIS
 
     @classmethod
@@ -186,34 +184,24 @@ class EKF:
         """ Check if z is inside sqrt(gate_sized_squared)-sigma ellipse of ekfstate in sensor_state """
 
         # a function to be used in PDA and IMM-PDA
-        gated = self.NIS(z=z, ekfstate=ekfstate, sensor_state=sensor_state) < gate_size_square  # TODO in PDA exercise
+        gated = None  # TODO in PDA exercise
         return gated
 
-    def loglikelihood(
-        self,
-        z: np.ndarray,
-        ekfstate: GaussParams,
-        sensor_state: Optional[Dict[str, Any]] = None,
-    ) -> float:
+    def loglikelihood(self,
+                      z: np.ndarray,
+                      ekfstate: GaussParams,
+                      sensor_state: Dict[str, Any] = None
+                      ) -> float:
         """Calculate the log likelihood of ekfstate at z in sensor_state"""
-
+        # we need this function in IMM, PDA and IMM-PDA exercises
+        # not necessary for tuning in EKF exercise
         v, S = self.innovation(z, ekfstate, sensor_state=sensor_state)
 
-        cholS = la.cholesky(S, lower=True)
-
-        invcholS_v = la.solve_triangular(cholS, v, lower=True)
-        NISby2 = (invcholS_v ** 2).sum() / 2
-        # alternative self.NIS(...) /2 or v @ la.solve(S, v)/2
-
-        logdetSby2 = np.log(cholS.diagonal()).sum()
-        # alternative use la.slogdet(S)
-
-        ll = -(NISby2 + logdetSby2 + self._MLOG2PIby2)
-
-        # simplest overall alternative
-        # ll = scipy.stats.multivariate_normal.logpdf(v, cov=S)
+        # TODO: log likelihood, Hint: log(N(v, S))) -> NIS, la.slogdet.
+        ll = -0.5 *(self.NIS(z, ekfstate, sensor_state) + la.slogdet(2*np.pi*S))
 
         return ll
+
     @classmethod
     def estimate(cls, ekfstate: GaussParams):
         """Get the estimate from the state with its covariance. (Compatibility method)"""
