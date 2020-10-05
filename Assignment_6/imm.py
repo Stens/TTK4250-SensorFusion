@@ -241,13 +241,16 @@ class IMM(Generic[MT]):
         mode_prob, mode_conditioned_component_prob = discrete_bayes(
             weights, component_conditioned_mode_prob)
         # Hint list_a of lists_b to list_b of lists_a: zip(*immstate_mixture.components)
-        # print("ZIPPITY ZIP", np.array(zip(*immstate_mixture.components)))
-        """ Wonky tonky
+        """ Wonky tonky (?)
         """
-        # TODO !!!
+        mode_states = []
+        components = zip(
+            *[comp.components for comp in immstate_mixture.components])
 
-        mode_states = np.sum(np.array(zip(*immstate_mixture.components))
-                             * mode_conditioned_component_prob)
+        for filt, mode_conditioned, component in zip(self.filters, mode_conditioned_component_prob, components):
+            state = filt.reduce_mixture(MixtureParameters(
+                mode_conditioned, component))
+            mode_states.append(state)
 
         immstate_reduced = MixtureParameters(mode_prob, mode_states)
 

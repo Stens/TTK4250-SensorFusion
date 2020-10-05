@@ -85,7 +85,8 @@ fig1, ax1 = plt.subplots(num=1, clear=True)
 Z_plot_data = np.empty((0, 2), dtype=float)
 plot_measurement_distance = 45
 for Zk, xgtk in zip(Z, Xgt):
-    to_plot = np.linalg.norm(Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
+    to_plot = np.linalg.norm(
+        Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
     Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
 
 ax1.scatter(*Z_plot_data.T, s=5, color="C1")
@@ -147,7 +148,8 @@ mean_init = np.array([0, 0, 0, 0, 0])
 cov_init = np.diag([1000, 1000, 30, 30, 0.1]) ** 2  # THIS WILL NOT BE GOOD
 mode_probabilities_init = np.array([p10, (1 - p10)])
 mode_states_init = GaussParams(mean_init, cov_init)
-init_imm_state = MixtureParameters(mode_probabilities_init, [mode_states_init] * 2)
+init_imm_state = MixtureParameters(
+    mode_probabilities_init, [mode_states_init] * 2)
 
 assert np.allclose(
     np.sum(mode_probabilities_init), 1
@@ -184,15 +186,18 @@ for k, (Zk, x_true_k) in enumerate(zip(Z, Xgt)):
     # You can look at the prediction estimate as well
     tracker_estimate = tracker.estimate(tracker_update)
 
-    NEES[k] = estats.NEES_indexed(
-        tracker_estimate.mean, tracker_estimate.cov, x_true_k, idxs=np.arange(4)
+    NEES[k] = estats.NEES_sequence_indexed(
+        tracker_estimate.mean, tracker_estimate.cov, x_true_k, idxs=np.arange(
+            4)
     )
 
-    NEESpos[k] = estats.NEES_indexed(
-        tracker_estimate.mean, tracker_estimate.cov, x_true_k, idxs=np.arange(2)
+    NEESpos[k] = estats.NEES_sequence_indexed(
+        tracker_estimate.mean, tracker_estimate.cov, x_true_k, idxs=np.arange(
+            2)
     )
-    NEESvel[k] = estats.NEES_indexed(
-        tracker_estimate.mean, tracker_estimate.cov, x_true_k, idxs=np.arange(2, 4)
+    NEESvel[k] = estats.NEES_sequence_indexed(
+        tracker_estimate.mean, tracker_estimate.cov, x_true_k, idxs=np.arange(
+            2, 4)
     )
 
     tracker_predict_list.append(tracker_predict)
@@ -268,10 +273,12 @@ print(f"ANEES = {ANEES:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
 
 # errors
 fig5, axs5 = plt.subplots(2, num=5, clear=True)
-axs5[0].plot(np.arange(K) * Ts, np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=1))
+axs5[0].plot(np.arange(K) * Ts,
+             np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=1))
 axs5[0].set_ylabel("position error")
 
-axs5[1].plot(np.arange(K) * Ts, np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1))
+axs5[1].plot(np.arange(K) * Ts,
+             np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1))
 axs5[1].set_ylabel("velocity error")
 
 plt.show()
