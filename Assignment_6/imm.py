@@ -171,6 +171,7 @@ class IMM(Generic[MT]):
         """Calculate the mode probabilities in immstate updated with z in sensor_state"""
         loglikelihood = np.array([fs.loglikelihood(z, cs, sensor_state=sensor_state)
                                   for fs, cs in zip(self.filters, immstate.components)])
+
         logjoint = loglikelihood + np.log(immstate.weights)
         updated_mode_probabilities = np.exp(logjoint - logsumexp(logjoint))
         # Optional debuging
