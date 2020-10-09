@@ -140,7 +140,6 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         filter_state_updated_mixture_components = np.array(self.conditional_update(
             Z=Zg, filter_state=filter_state, sensor_state=sensor_state))  # TODO
 
-        print(beta[0])
         # make mixture
         filter_state_update_mixture = MixtureParameters(
             beta, filter_state_updated_mixture_components
