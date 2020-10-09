@@ -73,7 +73,7 @@ class EKF:
 
         zbar = self.sensor_model.h(x)@x  # TODO predicted measurement
         v = z - zbar[:2]  # TODO the innovation
-        v = np.append(v,np.zeros(2))
+        v = np.append(v, np.zeros(2))
         return v
 
     def innovation_cov(self,
@@ -89,7 +89,7 @@ class EKF:
         h = self.sensor_model.h(x, sensor_state=sensor_state)
         R = self.sensor_model.R(x, sensor_state=sensor_state, z=z)
 
-        S = h @ P @ h.T +R  # TODO the innovation covariance
+        S = h @ P @ h.T + R  # TODO the innovation covariance
 
         return S
 
@@ -122,10 +122,11 @@ class EKF:
 
         H = self.sensor_model.H(x, sensor_state=sensor_state)
 
-        W =  P@H.T@la.inv(S) # TODO: the kalman gain, Hint: la.solve, la.inv
+        W = P@H.T@la.inv(S)  # TODO: the kalman gain, Hint: la.solve, la.inv
 
-        x_upd = x+ W@v  # TODO: the mean update
-        P_upd = (np.identity(P.shape[0]) -W@H)@P  # TODO: the covariance update
+        x_upd = x + W@v  # TODO: the mean update
+        # TODO: the covariance update
+        P_upd = (np.identity(P.shape[0]) - W@H)@P
 
         ekfstate_upd = GaussParams(x_upd, P_upd)
 
@@ -171,7 +172,7 @@ class EKF:
         x, P = ekfstate
 
         x_diff = x-x_true  # Optional step
-        NEES = (x_diff.T) @ P @ x  # TODO
+        NEES = (x_diff.T) @ la.inv(P) @ x_diff  # TODO
         return NEES
 
     def gate(self,
@@ -198,7 +199,8 @@ class EKF:
         v, S = self.innovation(z, ekfstate, sensor_state=sensor_state)
 
         # TODO: log likelihood, Hint: log(N(v, S))) -> NIS, la.slogdet.
-        ll = -0.5 *(self.NIS(z, ekfstate, sensor_state) + la.slogdet(2*np.pi*S))
+        ll = -0.5 * (self.NIS(z, ekfstate, sensor_state) +
+                     la.slogdet(2*np.pi*S))
 
         return ll
 

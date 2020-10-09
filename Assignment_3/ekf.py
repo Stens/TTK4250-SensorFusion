@@ -54,7 +54,7 @@ class EKF:
         F = self.dynamic_model.F(x, Ts)
         Q = self.dynamic_model.Q(x, Ts)
 
-        x_pred = self.dynamic_model.f(x,Ts)  # TODO
+        x_pred = self.dynamic_model.f(x, Ts)  # TODO
         P_pred = F@P@F.T+Q  # TODO
 
         state_pred = GaussParams(x_pred, P_pred)
@@ -72,8 +72,8 @@ class EKF:
 
         x = ekfstate.mean
 
-        zbar = self.sensor_model.h(x) # TODO predicted measurement
-        v = z - zbar # TODO the innovation
+        zbar = self.sensor_model.h(x)  # TODO predicted measurement
+        v = z - zbar  # TODO the innovation
         return v
 
     def innovation_cov(self,
@@ -89,7 +89,7 @@ class EKF:
         H = self.sensor_model.H(x, sensor_state=sensor_state)
         R = self.sensor_model.R(x, sensor_state=sensor_state, z=z)
 
-        S = H @ P @ H.T +R  # TODO the innovation covariance
+        S = H @ P @ H.T + R  # TODO the innovation covariance
 
         return S
 
@@ -122,10 +122,11 @@ class EKF:
 
         H = self.sensor_model.H(x, sensor_state=sensor_state)
 
-        W =  P@H.T@la.inv(S) # TODO: the kalman gain, Hint: la.solve, la.inv
+        W = P@H.T@la.inv(S)  # TODO: the kalman gain, Hint: la.solve, la.inv
 
-        x_upd = x+ W@v  # TODO: the mean update
-        P_upd = (np.identity(P.shape[0]) -W@H)@P  # TODO: the covariance update
+        x_upd = x + W@v  # TODO: the mean update
+        # TODO: the covariance update
+        P_upd = (np.identity(P.shape[0]) - W@H)@P
 
         ekfstate_upd = GaussParams(x_upd, P_upd)
 
@@ -173,7 +174,7 @@ class EKF:
         x, P = ekfstate
 
         x_diff = x-x_true  # Optional step
-        NEES = (x_diff.T) @ P @ x  # TODO
+        NEES = (x_diff.T) @ la.inv(P) @ x_diff  # TODO
         return NEES
 
     def gate(self,
@@ -186,7 +187,9 @@ class EKF:
         """ Check if z is inside sqrt(gate_sized_squared)-sigma ellipse of ekfstate in sensor_state """
 
         # a function to be used in PDA and IMM-PDA
-        gated = self.NIS(z=z, ekfstate=ekfstate, sensor_state=sensor_state) < gate_size_square  # TODO in PDA exercise
+        # TODO in PDA exercise
+        gated = self.NIS(z=z, ekfstate=ekfstate,
+                         sensor_state=sensor_state) < gate_size_square
         return gated
 
     def loglikelihood(
@@ -214,6 +217,7 @@ class EKF:
         # ll = scipy.stats.multivariate_normal.logpdf(v, cov=S)
 
         return ll
+
     @classmethod
     def estimate(cls, ekfstate: GaussParams):
         """Get the estimate from the state with its covariance. (Compatibility method)"""

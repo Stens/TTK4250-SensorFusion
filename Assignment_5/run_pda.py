@@ -78,7 +78,8 @@ fig1, ax1 = plt.subplots(num=1, clear=True)
 Z_plot_data = np.empty((0, 2), dtype=float)
 plot_measurement_distance = 45
 for Zk, xgtk in zip(Z, Xgt):
-    to_plot = np.linalg.norm(Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
+    to_plot = np.linalg.norm(
+        Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
     Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
 
 ax1.scatter(*Z_plot_data.T, color="C1")
@@ -103,12 +104,12 @@ ax1.set_title("True trajectory and the nearby measurements")
 #     plt.show(block=False)
 #     plt.pause(plotpause)
 # %%
-sigma_a = 1 # TODO
-sigma_z = 4 # TODO
+sigma_a = 2  # TODO
+sigma_z = 4  # TODO
 
-PD = 0.95 # TODO
-clutter_intensity = 1e-6 # TODO
-gate_size = 5 # TODO
+PD = 0.8  # TODO
+clutter_intensity = 1e-6  # TODO
+gate_size = 5  # TODO
 
 dynamic_model = dynamicmodels.WhitenoiseAccelleration(sigma_a)
 measurement_model = measurementmodels.CartesianPosition(sigma_z)
@@ -126,7 +127,7 @@ x_bar_init = np.array([*Z[0][true_association[0] - 1], 0, 0])
 
 P_bar_init = np.zeros((4, 4))
 P_bar_init[[0, 1], [0, 1]] = 2 * sigma_z ** 2
-P_bar_init[[2, 3], [2, 3]] = 10 ** 2
+P_bar_init[[2, 3], [2, 3]] = 20
 
 init_state = tracker.init_filter_state({"mean": x_bar_init, "cov": P_bar_init})
 
@@ -135,20 +136,24 @@ tracker_update_list = []
 tracker_predict_list = []
 # estimate
 for k, (Zk, x_true_k) in enumerate(zip(Z, Xgt)):
-    tracker_predict = tracker.predict(filter_state=tracker_update, Ts=Ts)# TODO
-    tracker_update = tracker.update(Z=Zk, filter_state=tracker_predict)# TODO
-    NEES[k] = tracker.state_filter.NEES(tracker_update, x_true_k[:-1]) # TODO spør studass
-    x_diff =tracker_update.mean -x_true_k[:-1]
-    NEESpos[k] = (x_diff[:2]).T @ np.linalg.inv(tracker_update.cov[:2,:2]) @ (x_diff[:2]) # TODO
-    NEESvel[k] = (x_diff[2:4]).T @ np.linalg.inv(tracker_update.cov[2:4,2:4]) @ (x_diff[2:4]) # TODO
+    tracker_predict = tracker.predict(
+        filter_state=tracker_update, Ts=Ts)  # TODO
+    tracker_update = tracker.update(Z=Zk, filter_state=tracker_predict)  # TODO
+    NEES[k] = tracker.state_filter.NEES(
+        tracker_update, x_true_k[:-1])  # TODO spør studass. Huske ikke hva jeg skulle spørre om :(
+    x_diff = tracker_update.mean - x_true_k[:-1]
+    NEESpos[k] = (
+        x_diff[:2]).T @ np.linalg.inv(tracker_update.cov[:2, :2]) @ (x_diff[:2])  # TODO
+    NEESvel[k] = (x_diff[2:4]).T @ np.linalg.inv(tracker_update.cov[2:4,
+                                                                    2:4]) @ (x_diff[2:4])  # TODO
 
     tracker_predict_list.append(tracker_predict)
     tracker_update_list.append(tracker_update)
 
 x_hat = np.array([upd.mean for upd in tracker_update_list])
 # calculate a performance metric
-posRMSE = np.sqrt(np.mean((x_hat[0] - Xgt[0][:-1])**2)) # TODO: position RMSE
-velRMSE = np.sqrt(np.mean((x_hat[1] - Xgt[1][:-1])**2))# TODO: velocity RMSE
+posRMSE = np.sqrt(np.mean((x_hat[0] - Xgt[0][:-1])**2))  # TODO: position RMSE
+velRMSE = np.sqrt(np.mean((x_hat[1] - Xgt[1][:-1])**2))  # TODO: velocity RMSE
 
 # %% plots
 fig3, ax3 = plt.subplots(num=3, clear=True)
@@ -160,9 +165,12 @@ ax3.set_title(
 
 fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
 
-confprob = 0.9 # TODO: probability for confidence interval
-CI2 = np.array(scipy.stats.chi2.interval(confprob, 2))# TODO: confidence interval for NEESpos and NEESvel
-CI4 = np.array(scipy.stats.chi2.interval(confprob, 4)) # TODO: confidence interval for NEES
+confprob = 0.9  # TODO: probability for confidence interval
+# TODO: confidence interval for NEESpos and NEESvel
+CI2 = np.array(scipy.stats.chi2.interval(confprob, 2))
+# TODO: confidence interval for NEES
+CI4 = np.array(scipy.stats.chi2.interval(confprob, 4))
+
 
 axs4[0].plot(np.arange(K) * Ts, NEESpos)
 axs4[0].plot([0, (K - 1) * Ts], np.repeat(CI2[None], 2, 0), "--r")
@@ -182,21 +190,24 @@ axs4[2].set_ylabel("NEES")
 inCI = np.mean((CI2[0] <= NEES) * (NEES <= CI2[1]))
 axs4[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
 
-confprob = 0.9 # TODO
-CI2K = np.array(scipy.stats.chi2.interval(confprob, 2 * K)) / K# TODO: ANEESpos and ANEESvel
-CI4K =  np.array(scipy.stats.chi2.interval(confprob, 4 * K)) / K# TODO: NEES
-ANEESpos = np.mean(NEESpos, axis=0)# TODO
-ANEESvel = np.mean(NEESvel, axis=0) # TODO
-ANEES = np.mean(NEES, axis=0) # TODO
+confprob = 0.9  # TODO
+CI2K = np.array(scipy.stats.chi2.interval(confprob, 2 * K)) / \
+    K  # TODO: ANEESpos and ANEESvel
+CI4K = np.array(scipy.stats.chi2.interval(confprob, 4 * K)) / K  # TODO: NEES
+ANEESpos = np.mean(NEESpos, axis=0)  # TODO
+ANEESvel = np.mean(NEESvel, axis=0)  # TODO
+ANEES = np.mean(NEES, axis=0)  # TODO
 print(f"ANEESpos = {ANEESpos:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
 print(f"ANEESvel = {ANEESvel:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
 print(f"ANEES = {ANEES:.2f} with CI = [{CI4K[0]:.2f}, {CI4K[1]:.2f}]")
 
 fig5, axs5 = plt.subplots(2, num=5, clear=True)
-axs5[0].plot(np.arange(K) * Ts, np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=1))
+axs5[0].plot(np.arange(K) * Ts,
+             np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=1))
 axs5[0].set_ylabel("position error")
 
-axs5[1].plot(np.arange(K) * Ts, np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1))
+axs5[1].plot(np.arange(K) * Ts,
+             np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1))
 axs5[1].set_ylabel("velocity error")
 # %%
 plt.show()
