@@ -122,11 +122,11 @@ if play_movie:
 sigma_z = 2.25
 clutter_intensity = 1e-3
 PD = 0.95
-gate_size = 4
+gate_size = 3
 
 # dynamic models
 # NB: THESE ARE CORRECT
-sigma_a_CV = 0.3
+sigma_a_CV = 0.9
 sigma_a_CT = 0.15
 sigma_omega = 5e-4 * np.pi
 
