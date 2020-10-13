@@ -123,14 +123,14 @@ gate_size = 2.5
 # dynamic models
 sigma_a_CV = 0.3
 sigma_a_CT = 0.3
-sigma_omega = 5e-2 * np.pi
+sigma_omega = 1e-2 * np.pi
 
 
 # markov chain
 PI11 = 0.9
 PI22 = 0.9
 
-p10 = 0.9  # initvalue for mode probabilities
+p10 = 0.5  # initvalue for mode probabilities
 
 PI = np.array([[PI11, (1 - PI11)], [(1 - PI22), PI22]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
@@ -232,10 +232,15 @@ axs3[0].set_title(
 )
 axs3[0].axis("equal")
 # probabilities
-axs3[1].plot(np.arange(K) * Ts, prob_hat)
+axs3[1].plot(np.arange(K) * Ts, prob_hat[:, 0], color="r", label="CV")
+axs3[1].plot(np.arange(K) * Ts, prob_hat[:, 1], color="g", label="CT")
+
 axs3[1].set_ylim([0, 1])
 axs3[1].set_ylabel("mode probability")
 axs3[1].set_xlabel("time")
+axs3[0].legend()
+axs3[1].legend()
+
 
 # NEES
 fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
