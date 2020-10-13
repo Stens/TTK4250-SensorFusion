@@ -34,7 +34,7 @@ def plot_cov_ellipse2d(
     return ax.add_patch(ell)
 
 
-def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter):
+def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter, models=["CV", "CT", "CV_H"]):
 
     # to see your plot config
     print(f"matplotlib backend: {matplotlib.get_backend()}")
@@ -152,10 +152,13 @@ def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter):
     )
     axs3[0].axis("equal")
     # probabilities
-    axs3[1].plot([np.sum(Ts[:i]) for i, _ in enumerate(Ts)], prob_hat)
+    for j, mod in enumerate(models):
+        axs3[1].plot([np.sum(Ts[:i]) for i, _ in enumerate(Ts)],
+                     prob_hat[:, j], label=mod)
     axs3[1].set_ylim([0, 1])
     axs3[1].set_ylabel("mode probability")
     axs3[1].set_xlabel("time")
+    axs3[1].legend()
 
     # NEES
     fig4, axs4 = plt.subplots(3, sharex=True, num=4, clear=True)
@@ -193,7 +196,6 @@ def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter):
                  np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1))
     axs5[1].set_ylabel("velocity error")
 
-    play_estimation_movie = True
     mTL = 0.2  # maximum transparancy (between 0 and 1);
     plot_pause = 0.2  # lenght to pause between time steps;
     start_k = 1
