@@ -26,6 +26,7 @@ filename_to_load = "data_joyride.mat"
 loaded_data = scipy.io.loadmat(filename_to_load)
 K = loaded_data["K"].item() - 1
 Ts = loaded_data["Ts"].squeeze()
+Ts = np.array([0, *Ts])
 Xgt = loaded_data["Xgt"].T
 Z = [zk.T for zk in loaded_data["Z"].ravel()]
 ownship = loaded_data["ownship"]
@@ -39,13 +40,14 @@ fig1, ax1 = plt.subplots(num=1, clear=True)
 Z_plot_data = np.empty((0, 2), dtype=float)
 plot_measurement_distance = 45
 for Zk, xgtk in zip(Z, Xgt):
-    to_plot = np.linalg.norm(Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
+    to_plot = np.linalg.norm(
+        Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
     Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
 
 ax1.scatter(*Z_plot_data.T, color="C1")
 ax1.plot(*Xgt.T[:2], color="C0", linewidth=1.5)
 ax1.set_title("True trajectory and the nearby measurements")
-plt.show(block=False)
+# plt.show()
 
 # %% play measurement movie. Remember that you can cross out the window
 play_movie = False
@@ -59,7 +61,7 @@ if play_movie:
     mins = np.vstack(Z).min(axis=0)
     maxes = np.vstack(Z).max(axis=0)
     ax2.axis([mins[0], maxes[0], mins[1], maxes[1]])
-    plotpause = 0.1
+    plotpause = 0.05
     # sets a pause in between time steps if it goes to fast
     for k, Zk in enumerate(Z[play_slice]):
         sh.set_offsets(Zk)
@@ -70,45 +72,43 @@ if play_movie:
 
 # %% setup and track
 
-# sensor
-sigma_z = 6
-clutter_intensity = 1e-3
-PD = 0.95
+sigma_z = 10
+clutter_intensity = 3e-5
+PD = 0.9
 gate_size = 3
 
 # dynamic models
-# NB: THESE ARE CORRECT
-sigma_a_CV = 0.3
-sigma_a_CV_high = 1.5
-sigma_a_CT = 0.3
-sigma_omega = 5e-4 * np.pi
+sigma_a_CV = 1.3
+sigma_a_CV_high = 10
+sigma_a_CT = 1.6
+sigma_omega = 0.02*np.pi
 
 # markov chain
-PI11 = 0.9
-PI22 = 0.9
-PI33 = 0.9
+
 
 p10 = 0.9  # initvalue for mode probabilities
-PI = np.array([[0.8, 0.1, 0.1], [0.1, 0.8, 0.1], [0.1, 0.1, 0.8]])
+PI = np.array(
+    [[0.9, 0.05, 0.05], [0.05, 0.9, 0.05], [0.05, 0.05, 0.9]])
+PI = np.array([[0.85, 0.15], [0.15, 0.85]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
 mean_init = np.array([*Xgt[0, :], 0])
-Xgt = Xgt[1:]
-cov_init = np.diag([20, 20, 5, 5, 0.1]) ** 2  
-mode_probabilities_init = np.array([0.1, 0.8, 0.1])
+cov_init = np.diag([20, 20, 1, 1, 0.1]) ** 2
+mode_probabilities_init = np.array([0.9, 0.1])
 mode_states_init = GaussParams(mean_init, cov_init)
 init_imm_state = MixtureParameters(
-    mode_probabilities_init, [mode_states_init] * 3)
+    mode_probabilities_init, [mode_states_init] * 2)
+init_ekf_state = GaussParams(mean_init, cov_init)
 
 measurement_model = measurementmodels.CartesianPosition(sigma_z, state_dim=5)
 dynamic_models: List[dynamicmodels.DynamicModel] = []
 dynamic_models.append(dynamicmodels.WhitenoiseAccelleration(sigma_a_CV, n=5))
-dynamic_models.append(dynamicmodels.WhitenoiseAccelleration(sigma_a_CV_high, n=5))
 dynamic_models.append(dynamicmodels.ConstantTurnrate(sigma_a_CT, sigma_omega))
+# dynamic_models.append(dynamicmodels.WhitenoiseAccelleration(sigma_a_CV_high, n=5))
 ekf_filters = []
 ekf_filters.append(ekf.EKF(dynamic_models[0], measurement_model))
 ekf_filters.append(ekf.EKF(dynamic_models[1], measurement_model))
-ekf_filters.append(ekf.EKF(dynamic_models[2], measurement_model))
+# ekf_filters.append(ekf.EKF(dynamic_models[2], measurement_model))
 imm_filter = imm.IMM(ekf_filters, PI)
 
 tracker = pda.PDA(imm_filter, clutter_intensity, PD, gate_size)
