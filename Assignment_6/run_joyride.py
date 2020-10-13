@@ -88,12 +88,12 @@ sigma_omega = 0.0005*np.pi
 p10 = 0.9  # initvalue for mode probabilities
 PI = np.array([[0.85, 0.15], [0.15, 0.85]])
 PI = np.array(
-    [[0.9, 0.05, 0.05], [0.05, 0.9, 0.05], [0.05, 0.05, 0.9]])
+    [[0.9, 0.05, 0.05], [0.025, 0.95, 0.025], [0.15, 0.15, 0.7]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
 mean_init = np.array([*Xgt[0, :], 0])
-cov_init = np.diag([20, 20, 1, 1, 0.1]) ** 2
-mode_probabilities_init = np.array([0.4, 0.4, 0.2])
+cov_init = np.diag([20, 20, 2, 2, 0.0001]) ** 2
+mode_probabilities_init = np.array([0.8, 0.1, 0.1])
 mode_states_init = GaussParams(mean_init, cov_init)
 init_imm_state = MixtureParameters(
     mode_probabilities_init, [mode_states_init] * 3)
