@@ -73,42 +73,42 @@ if play_movie:
 # %% setup and track
 
 sigma_z = 10
-clutter_intensity = 3e-5
-PD = 0.9
-gate_size = 3
+clutter_intensity = 1e-5
+PD = 0.8
+gate_size = 2.5
 
 # dynamic models
-sigma_a_CV = 1.3
+sigma_a_CV = 1.
 sigma_a_CV_high = 10
-sigma_a_CT = 1.6
-sigma_omega = 0.02*np.pi
+sigma_a_CT = 1.
+sigma_omega = 0.0005*np.pi
 
 # markov chain
 
-
 p10 = 0.9  # initvalue for mode probabilities
+PI = np.array([[0.85, 0.15], [0.15, 0.85]])
 PI = np.array(
     [[0.9, 0.05, 0.05], [0.05, 0.9, 0.05], [0.05, 0.05, 0.9]])
-PI = np.array([[0.85, 0.15], [0.15, 0.85]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
 mean_init = np.array([*Xgt[0, :], 0])
 cov_init = np.diag([20, 20, 1, 1, 0.1]) ** 2
-mode_probabilities_init = np.array([0.9, 0.1])
+mode_probabilities_init = np.array([0.4, 0.4, 0.2])
 mode_states_init = GaussParams(mean_init, cov_init)
 init_imm_state = MixtureParameters(
-    mode_probabilities_init, [mode_states_init] * 2)
+    mode_probabilities_init, [mode_states_init] * 3)
 init_ekf_state = GaussParams(mean_init, cov_init)
 
 measurement_model = measurementmodels.CartesianPosition(sigma_z, state_dim=5)
 dynamic_models: List[dynamicmodels.DynamicModel] = []
 dynamic_models.append(dynamicmodels.WhitenoiseAccelleration(sigma_a_CV, n=5))
 dynamic_models.append(dynamicmodels.ConstantTurnrate(sigma_a_CT, sigma_omega))
-# dynamic_models.append(dynamicmodels.WhitenoiseAccelleration(sigma_a_CV_high, n=5))
+dynamic_models.append(
+    dynamicmodels.WhitenoiseAccelleration(sigma_a_CV_high, n=5))
 ekf_filters = []
 ekf_filters.append(ekf.EKF(dynamic_models[0], measurement_model))
 ekf_filters.append(ekf.EKF(dynamic_models[1], measurement_model))
-# ekf_filters.append(ekf.EKF(dynamic_models[2], measurement_model))
+ekf_filters.append(ekf.EKF(dynamic_models[2], measurement_model))
 imm_filter = imm.IMM(ekf_filters, PI)
 
 tracker = pda.PDA(imm_filter, clutter_intensity, PD, gate_size)
