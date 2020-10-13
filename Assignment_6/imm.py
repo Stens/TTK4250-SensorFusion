@@ -221,7 +221,7 @@ class IMM(Generic[MT]):
         # THIS IS ONLY NEEDED FOR IMM-PDA. You can therefore wait if you prefer.
 
         mode_conditioned_ll = [f.loglikelihood(
-            z, ekfstate, sensor_state=sensor_state) for f, ekfstate in zip(self.filters, immstate.components)]  # TODO in for IMM-PDA
+            z, ekfstate, sensor_state=sensor_state) for f, ekfstate in zip(self.filters, immstate.components)]
 
         ll = logsumexp(np.log(immstate.weights) + mode_conditioned_ll, axis=0)
 
@@ -242,8 +242,6 @@ class IMM(Generic[MT]):
         mode_prob, mode_conditioned_component_prob = discrete_bayes(
             weights, component_conditioned_mode_prob)
         # Hint list_a of lists_b to list_b of lists_a: zip(*immstate_mixture.components)
-        """ Wonky tonky (?)
-        """
         mode_states = []
         components = zip(
             *[comp.components for comp in immstate_mixture.components])
@@ -349,7 +347,7 @@ class IMM(Generic[MT]):
         mode probabilities: array_like
         components:
 
-        """  # TODO there are cases where MP unaltered can lead to trouble
+        """
 
         raise NotImplementedError(
             f"IMM do not know how to initialize a immstate from: {init}"

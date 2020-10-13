@@ -55,8 +55,8 @@ class EKF:
         Q = self.dynamic_model.Q(x, Ts)
         f = self.dynamic_model.f(x, Ts)
 
-        x_pred = self.dynamic_model.f(x, Ts)  # TODO
-        P_pred = F@P@F.T+Q  # TODO
+        x_pred = self.dynamic_model.f(x, Ts)
+        P_pred = F@P@F.T+Q
 
         state_pred = GaussParams(x_pred, P_pred)
 
@@ -73,8 +73,8 @@ class EKF:
 
         x = ekfstate.mean
 
-        zbar = self.sensor_model.h(x)  # TODO predicted measurement
-        v = z - zbar  # TODO the innovation
+        zbar = self.sensor_model.h(x)
+        v = z - zbar
         return v
 
     def innovation_cov(self,
@@ -90,7 +90,7 @@ class EKF:
         H = self.sensor_model.H(x, sensor_state=sensor_state)
         R = self.sensor_model.R(x, sensor_state=sensor_state, z=z)
 
-        S = H @ P @ H.T + R  # TODO the innovation covariance
+        S = H @ P @ H.T + R
 
         return S
 
@@ -102,7 +102,6 @@ class EKF:
                    ) -> GaussParams:
         """Calculate the innovation for ekfstate at z in sensor_state."""
 
-        # TODO: reuse the above functions for the innovation and its covariance
         v = self.innovation_mean(z, ekfstate)
         S = self.innovation_cov(z, ekfstate)
 
@@ -135,9 +134,8 @@ class EKF:
              ) -> GaussParams:
         """Predict ekfstate Ts units ahead and then update this prediction with z in sensor_state."""
 
-        # TODO: resue the above functions
-        ekfstate_pred = self.predict(ekfstate, Ts)  # TODO
-        ekfstate_upd = self.update(z, ekfstate_pred)  # TODO
+        ekfstate_pred = self.predict(ekfstate, Ts)
+        ekfstate_upd = self.update(z, ekfstate_pred)
         return ekfstate_upd
 
     def NIS(self,
@@ -167,8 +165,8 @@ class EKF:
 
         x, P = ekfstate
 
-        x_diff = x-x_true  # Optional step
-        NEES = (x_diff.T) @ la.inv(P) @ x_diff  # TODO
+        x_diff = x-x_true
+        NEES = (x_diff.T) @ la.inv(P) @ x_diff
         return NEES
 
     def gate(self,
@@ -180,8 +178,6 @@ class EKF:
              ) -> bool:
         """ Check if z is inside sqrt(gate_sized_squared)-sigma ellipse of ekfstate in sensor_state """
 
-        # a function to be used in PDA and IMM-PDA
-        # TODO in PDA exercise
         gated = self.NIS(z=z, ekfstate=ekfstate,
                          sensor_state=sensor_state) < gate_size_square
         return gated
@@ -254,9 +250,6 @@ class EKF:
         ekfupd_list = GaussParamList.allocate(K, n)
 
         # perform the actual predict and update cycle
-        # TODO loop over the data and get both the predicted and updated states in the lists
-        # the predicted is good to have for evaluation purposes
-        # A potential pythonic way of looping through  the data
         for k, (zk, Tsk, ssk) in enumerate(zip(Z, Ts_arr, sensor_state_seq)):
             state_pred = self.predict(ekfupd, Tsk)
             # add to ekfpred_list

@@ -39,8 +39,6 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         for i, z_i in enumerate(Z):
             gated[i] = self.state_filter.gate(z_i, filter_state,
                                               gate_size_square=g_squared, sensor_state=sensor_state)
-        # The loop can be done using ether of these: normal loop, list comprehension or map
-        # TODO: some for loop over elements of Z using self.state_filter.
         return np.array(gated)
 
     def loglikelihood_ratios(
@@ -60,9 +58,9 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         ll = np.empty(Z.shape[0] + 1)
 
         # calculate log likelihood ratios
-        ll[0] = log_clutter + log_PND  # TODO: missed detection
+        ll[0] = log_clutter + log_PND
         ll[1:] = log_PD + [self.state_filter.loglikelihood(z_i,
-                                                           filter_state, sensor_state=sensor_state) for z_i in Z]  # TODO: some for loop over elements of Z using self.state_filter.loglikelihood
+                                                           filter_state, sensor_state=sensor_state) for z_i in Z]
 
         return ll
 
@@ -81,7 +79,7 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
             Z, filter_state, sensor_state=sensor_state)
 
         # probabilities
-        beta = np.exp(lls - logsumexp(lls))  # TODO
+        beta = np.exp(lls - logsumexp(lls))
         return beta
 
     def conditional_update(
@@ -98,11 +96,9 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
 
         conditional_update = []
         conditional_update.append(
-            # TODO: missed detection, just update with the prediction.
             filter_state
         )
         conditional_update.extend(
-            # TODO: some loop over Z making a list of updates
             [self.state_filter.update(z_i, filter_state) for z_i in Z]
         )
 
@@ -112,7 +108,7 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         self, mixture_filter_state: MixtureParameters[ET]
     ) -> ET:  # the two first moments of the mixture
         """Reduce a Gaussian mixture to a single Gaussian."""
-        return self.state_filter.reduce_mixture(mixture_filter_state)  # TODO: utilize self.state_filter to keep this working for both EKF and IMM
+        return self.state_filter.reduce_mixture(mixture_filter_state)
 
     def update(
         self,
@@ -129,16 +125,16 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         """
         # remove the not gated measurements from consideration
         gated = self.gate(Z=Z, filter_state=filter_state,
-                          sensor_state=sensor_state)  # TODO
+                          sensor_state=sensor_state)
         Zg = Z[gated]
 
         # find association probabilities
         beta = np.array(self.association_probabilities(
-            Z=Zg, filter_state=filter_state, sensor_state=sensor_state))  # TODO
+            Z=Zg, filter_state=filter_state, sensor_state=sensor_state))
 
         # find the mixture components
         filter_state_updated_mixture_components = np.array(self.conditional_update(
-            Z=Zg, filter_state=filter_state, sensor_state=sensor_state))  # TODO
+            Z=Zg, filter_state=filter_state, sensor_state=sensor_state))
 
         # make mixture
         filter_state_update_mixture = MixtureParameters(
@@ -146,7 +142,7 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         )
         # reduce mixture
         filter_state_updated_reduced = self.reduce_mixture(
-            filter_state_update_mixture)  # TODO
+            filter_state_update_mixture)
 
         return filter_state_updated_reduced
 
@@ -162,14 +158,14 @@ class PDA(Generic[ET]):  # Probabilistic Data Association
         """Perform a predict update cycle with Ts time units and measurements Z in sensor_state"""
 
         filter_state_predicted = self.predict(
-            filter_state=filter_state, Ts=Ts)  # TODO
+            filter_state=filter_state, Ts=Ts)
         filter_state_updated = self.update(
-            Z=Z, filter_state=filter_state_predicted, sensor_state=sensor_state)  # TODO
+            Z=Z, filter_state=filter_state_predicted, sensor_state=sensor_state)
         return filter_state_updated
 
     def estimate(self, filter_state: ET) -> GaussParams:
         """Get an estimate with its covariance from the filter state."""
-        return self.state_filter.estimate(filter_state)  # TODO: remember to use self.state_filter to keep it working for both EKF and IMM
+        return self.state_filter.estimate(filter_state)
 
     def init_filter_state(
         self,
