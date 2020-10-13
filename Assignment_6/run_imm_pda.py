@@ -18,9 +18,6 @@ import imm
 import pda
 import estimationstatistics as estats
 
-# %% plot config check and style setup
-
-
 # to see your plot config
 print(f"matplotlib backend: {matplotlib.get_backend()}")
 print(f"matplotlib config file: {matplotlib.matplotlib_fname()}")
@@ -45,8 +42,6 @@ print("continuing with this plotting backend", end="\n\n\n")
 
 # set styles
 try:
-    # installed with "pip install SciencePLots" (https://github.com/garrettj403/SciencePlots.git)
-    # gives quite nice plots
     plt_styles = ["science", "grid", "bright", "no-latex"]
     plt.style.use(plt_styles)
     print(f"pyplot using style set {plt_styles}")
@@ -76,7 +71,7 @@ loaded_data = scipy.io.loadmat(filename_to_load)
 K = loaded_data["K"].item()
 Ts = loaded_data["Ts"].item()
 Xgt = loaded_data["Xgt"].T
-Z = [zk.T for zk in loaded_data["Z"].ravel()]
+Z = np.array([zk.T for zk in loaded_data["Z"].ravel()])
 true_association = loaded_data["a"].ravel()
 
 # plot measurements close to the trajectory
@@ -118,23 +113,17 @@ if play_movie:
 
 # %% IMM-PDA
 
-# THE PRESET PARAMETERS AND INITIAL VALUES WILL CAUSE TRACK LOSS!
-# Some reasoning and previous exercises should let you avoid track loss.
-# No exceptions should be generated if PDA works correctly with IMM,
-# but no exceptions do not guarantee correct implementation.
-
 # sensor
-sigma_z = 2.25
-clutter_intensity = 1e-2
-PD = 0.99
-gate_size = 3
+sigma_z = 2
+clutter_intensity = 1e-5
+PD = 0.8
+gate_size = 2.5
 
 
 # dynamic models
-# NB: THESE ARE CORRECT
 sigma_a_CV = 0.3
-sigma_a_CT = 0.1
-sigma_omega = 5e-4 * np.pi
+sigma_a_CT = 0.3
+sigma_omega = 5e-2 * np.pi
 
 
 # markov chain
@@ -147,7 +136,7 @@ PI = np.array([[PI11, (1 - PI11)], [(1 - PI22), PI22]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
 mean_init = np.array(Xgt[0, :])
-cov_init = np.diag([20, 20, 5, 5, 0.1]) ** 2  # THIS WILL NOT BE GOOD
+cov_init = np.diag([20, 20, 5, 5, 0.1]) ** 2
 mode_probabilities_init = np.array([p10, (1 - p10)])
 mode_states_init = GaussParams(mean_init, cov_init)
 init_imm_state = MixtureParameters(
@@ -210,8 +199,8 @@ x_hat = np.array([est.mean for est in tracker_estimate_list])
 prob_hat = np.array([upd.weights for upd in tracker_update_list])
 
 # calculate a performance metrics
-poserr = np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=0)
-velerr = np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=0)
+poserr = np.linalg.norm(x_hat[:, :2] - Xgt[:, :2], axis=1)
+velerr = np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1)
 posRMSE = np.sqrt(
     np.mean(poserr ** 2)
 )  # not true RMSE (which is over monte carlo simulations)
@@ -265,7 +254,7 @@ axs4[1].set_title(f"{inCIvel*100:.1f}% inside {confprob*100:.1f}% CI")
 axs4[2].plot(np.arange(K) * Ts, NEES)
 axs4[2].plot([0, (K - 1) * Ts], np.repeat(CI4[None], 2, 0), "--r")
 axs4[2].set_ylabel("NEES")
-inCI = np.mean((CI2[0] <= NEES) * (NEES <= CI2[1]))
+inCI = np.mean((CI4[0] <= NEES) * (NEES <= CI4[1]))
 axs4[2].set_title(f"{inCI*100:.1f}% inside {confprob*100:.1f}% CI")
 
 print(f"ANEESpos = {ANEESpos:.2f} with CI = [{CI2K[0]:.2f}, {CI2K[1]:.2f}]")
@@ -283,8 +272,6 @@ axs5[1].plot(np.arange(K) * Ts,
 axs5[1].set_ylabel("velocity error")
 
 plt.show()
-
-# %% TBD: estimation "movie"
 
 
 def plot_cov_ellipse2d(
@@ -323,13 +310,12 @@ start_k = 1
 end_k = 10
 plot_range = slice(start_k, end_k)  # the range to go through
 
-# %k = 31; assert(all([k > 1, k <= K]), 'K must be in proper range')
 fig6, axs6 = plt.subplots(1, 2, num=6, clear=True)
 mode_lines = [axs6[0].plot(np.nan, np.nan, color=f"C{s}")[0] for s in range(2)]
 meas_sc = axs6[0].scatter(np.nan, np.nan, color="r", marker="x")
 meas_sc_true = axs6[0].scatter(np.nan, np.nan, color="g", marker="x")
-min_ax = np.vstack(Z).min(axis=0)  # min(cell2mat(Z'));
-max_ax = np.vstack(Z).max(axis=0)  # max(cell2mat(Z'));
+min_ax = np.vstack(Z).min(axis=0)
+max_ax = np.vstack(Z).max(axis=0)
 axs6[0].axis([min_ax[0], max_ax[0], min_ax[1], max_ax[0]])
 
 for k, (Zk, pred_k, upd_k, ak) in enumerate(
@@ -341,10 +327,8 @@ for k, (Zk, pred_k, upd_k, ak) in enumerate(
     ),
     start_k,
 ):
-    # k, (Zk, pred_k, upd_k, ak) = data
     (ax.cla() for ax in axs6)
     pl = []
-    # probbar(:, k), xbar(:, :, k), Pbar(:, :, :, k));
     gated = tracker.gate(Zk, pred_k)
     minG = 1e20 * np.ones(2)
     maxG = np.zeros(2)
@@ -358,7 +342,6 @@ for k, (Zk, pred_k, upd_k, ak) in enumerate(
         axs6[1].plot(prob_hat[: (k - 1), s], color=f"C{s}")
         for j, cuj in enumerate(cond_upd_k):
             alpha = 0.7 * beta_k[j] * cuj.weights[s] + 0.3
-            # csj = mTL * co(s, :) + (1 - mTL) * (beta(j)*skupd(s, j)*co(s, :) + (1 - beta(j)*skupd(s, j)) * ones(1, 3)); % transparancy
             upd_km1_s = tracker_update_list[k - 1].components[s]
             pl.append(
                 axs6[0].plot(
@@ -378,9 +361,7 @@ for k, (Zk, pred_k, upd_k, ak) in enumerate(
                     alpha=alpha,
                 )
             )
-            # axis([minAx(1), maxAx(1), minAx(2), maxAx(2)])
-            # %alpha(pl, beta(j)*skupd(s, j));
-            # drawnow;
+
             pl.append(
                 plot_cov_ellipse2d(
                     axs6[0],
@@ -392,8 +373,6 @@ for k, (Zk, pred_k, upd_k, ak) in enumerate(
             )
 
         Sk = imm_filter.filters[s].innovation_cov([0, 0], pred_k.components[s])
-        # gateData = chol(Sk)' * [cos(thetas); sin(thetas)] * sqrt(tracker.gateSize) + squeeze(xbar(1:2, s, k));
-        # plot(gateData(1, :),gateData(2, :), '.--', 'Color', co(s,:))
         pl.append(
             plot_cov_ellipse2d(
                 axs6[0],
@@ -410,26 +389,4 @@ for k, (Zk, pred_k, upd_k, ak) in enumerate(
         else:
             meas_sc_true.set_offsets(np.array([np.nan, np.nan]))
 
-#         # for j = 1:size(xkupd, 3)
-#         #     csj = mTL * co(s, :) + (1 - mTL) * (beta(j)*skupd(s, j)*co(s, :) + (1 - beta(j)*skupd(s, j)) * ones(1, 3)); % transparancy
-#         #     plot([k-1, k], [probhat(s, k-1), skupd(s, j)], '--', 'color', csj)
-
-#         # minGs = min(gateData, [], 2);
-#         # minG = minGs .* (minGs < minG) + minG .* (minG < minGs);
-#         # maxGs = max(gateData, [], 2);
-#         # maxG = maxGs .* (maxGs > maxG) + maxG .* (maxG > maxGs);
-
-#     # scale = 1
-#     # minAx = minG - scale * (maxG - minG);
-#     # maxAx = maxG + scale * (maxG - minG);
-#     # axis([minAx(1), maxAx(1), minAx(2), maxAx(2)])
-#     # %legend()
-
-#     # mode probabilities
-
-#     # axis([1, plotRange(end), 0, 1])
-#     # drawnow;
     plt.pause(plot_pause)
-    input("> Next step")
-
-# %%
