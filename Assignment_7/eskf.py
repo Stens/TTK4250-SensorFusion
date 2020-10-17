@@ -119,7 +119,7 @@ class ESKF:
         velocity_prediction = velocity + Ts * (R @ acceleration + self.g)
 
         quaternion_prediction = quaternion_product(
-            quaternion, np.exp(Ts*omega/2))
+            quaternion, la.expm(Ts*omega/2))
 
         # Normalize quaternion
         quaternion_prediction = quaternion_prediction / \
@@ -218,6 +218,10 @@ class ESKF:
         R = quaternion_to_rotation_matrix(x_nominal[ATT_IDX], debug=self.debug)
 
         G = np.zeros((15, 12))
+        G[VEL_IDX * CatSlice(start=0, stop=3)] = -1 * R
+        G[ERR_ATT_IDX * CatSlice(start=3, stop=6)] = -1 * np.eye(3)
+        G[ERR_ACC_BIAS_IDX * CatSlice(start=6, stop=9)] = np.eye(3)
+        G[ERR_GYRO_BIAS_IDX * CatSlice(start=9, stop=12)] = np.eye(3)
 
         assert G.shape == (
             15, 12), f"ESKF.Gerr: G-matrix shape incorrect {G.shape}"
