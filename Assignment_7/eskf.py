@@ -119,7 +119,7 @@ class ESKF:
         velocity_prediction = velocity + Ts * (R @ acceleration + self.g)
 
         quaternion_prediction = quaternion_product(
-            quaternion, la.expm(Ts*omega/2))
+            quaternion, np.exp(Ts*omega/2))
 
         # Normalize quaternion
         quaternion_prediction = quaternion_prediction / \
@@ -264,15 +264,20 @@ class ESKF:
         A = self.Aerr(x_nominal, acceleration, omega)
         G = self.Gerr(x_nominal)
 
-        V = np.zeros((30, 30))
+        V = np.reshape(Ts * np.array([
+            [-1 * A, G @ self.Q_err @ G.T],
+            [np.zeros(15, 15), A.T]
+        ]), (30, 30))
         assert V.shape == (
             30,
             30,
         ), f"ESKF.discrete_error_matrices: Van Loan matrix shape incorrect {omega.shape}"
         VanLoanMatrix = la.expm(V)  # This can be slow...
 
-        Ad = np.zeros((15, 15))
-        GQGd = np.zeros((15, 15))
+        Ad = VanLoanMatrix[CatSlice(
+            start=15, stop=30) * CatSlice(start=15, stop=30)]
+        GQGd = VanLoanMatrix[CatSlice(
+            start=0, stop=15) * CatSlice(start=15, stop=30)]
 
         assert Ad.shape == (
             15,
