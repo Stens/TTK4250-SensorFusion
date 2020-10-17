@@ -133,3 +133,6 @@ Assignment_3/.DS_Store
 
 # VScode settings
 .vscode
+
+# MacOS specific
+.DS_Store
