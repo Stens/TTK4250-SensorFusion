@@ -1,5 +1,6 @@
 import numpy as np
-import utils
+import math
+from utils import cross_product_matrix
 
 
 def quaternion_product(ql: np.ndarray, qr: np.ndarray) -> np.ndarray:
@@ -36,7 +37,13 @@ def quaternion_product(ql: np.ndarray, qr: np.ndarray) -> np.ndarray:
             f"utils.quaternion_product: Quaternion multiplication error, right quaternion wrong shape: {qr.shape}"
         )
 
-    quaternion = np.zeros((4,))  # TODO: Implement quaternion product
+    eps_matr = np.array([
+        [0, -1 * epsilon_left.T],
+        [epsilon_left, cross_product_matrix(epsilon_left)]
+    ])
+
+    # Eq. (10.34) :
+    quaternion = (eta_left * np.eye(2) + eps_matr) @ q_right
 
     # Ensure result is of correct shape
     quaternion = quaternion.ravel()
@@ -73,7 +80,9 @@ def quaternion_to_rotation_matrix(
             f"quaternion.quaternion_to_rotation_matrix: Quaternion to multiplication error, quaternion shape incorrect: {quaternion.shape}"
         )
 
-    R = np.zeros((3, 3))  # TODO: Convert from quaternion to rotation matrix
+    # Eq (10.37) :
+    cpm = cross_product_matrix(epsilon)
+    R = np.eye(3) + 2*eta*cpm + 2*cpm@cpm
 
     if debug:
         assert np.allclose(
@@ -100,12 +109,15 @@ def quaternion_to_euler(quaternion: np.ndarray) -> np.ndarray:
         4,
     ), f"quaternion.quaternion_to_euler: Quaternion shape incorrect {quaternion.shape}"
 
-    quaternion_squared = quaternion ** 2
+    [eta, eps] = quaternion
+    # quaternion_squared = quaternion ** 2
 
-    raise NotImplementedError  # TODO: remove when done
-    phi = 0  # TODO: Convert from quaternion to euler angles
-    theta = 0  # TODO: Convert from quaternion to euler angles
-    psi = 0  # TODO: Convert from quaternion to euler angles
+    # Eq. (10.38) :
+    phi = math.atan2(2*(eps[2]*eps[1] + eta*eps[0]),
+                     eta**2 - eps[0]**2 - eps[1]**2 + eps[2]**2)
+    theta = math.asin(2*(eta*eps[1] - eps[0]*eps[2]))
+    psi = math.atan2(2*(eps[0]*eps[1]), eta**2 + eps[0]
+                     ** 2 - eps[1]**2 - eps[2]**2)
 
     euler_angles = np.array([phi, theta, psi])
     assert euler_angles.shape == (
