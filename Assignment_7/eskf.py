@@ -513,9 +513,29 @@ class ESKF:
             3,
         ), f"ESKF.innovation_GNSS: lever_arm shape incorrect {lever_arm.shape}"
 
-        H = np.zeros((1,))  # TODO: measurement matrix
+        # Implements Eq. (10.78) :
+        eta, eps = x_nominal[ATT_IDX]
+        Q_dtheta = 1/2 * np.array([
+            -1 * eps,
+            [eta, -1*eps[2], eps[1]],
+            [eps[2], eta, -1*eps[0]],
+            [-1*eps[1], eps[0], eta]
+        ])
 
-        v = np.zeros((3,))  # TODO: innovation
+        # Implements Eq. (10.77) :
+        X_dx = np.eye(6 + 4 + 6)
+        X_dx[CatSlice(start=6, stop=6+4)**2] = Q_dtheta
+
+        # Measurement matrix:
+        # (We only want to update position)
+        H_x = np.zeros((3, 15))
+        H_x[CatSlice(start=0, stop=3) * POS_IDX] = np.eye(3)
+
+        # Implements (10.76) :
+        H = H_x @ X_dx
+
+        # Innovation step:
+        v = z_GNSS_position - H @ x_nominal
 
         # leverarm compensation
         if not np.allclose(lever_arm, 0):
@@ -525,7 +545,8 @@ class ESKF:
                 R @ cross_product_matrix(lever_arm, debug=self.debug)
             v -= R @ lever_arm
 
-        S = np.zeros((3, 3))  # TODO: innovation covariance
+        # Innovation covariance as per standard KF:
+        S = H @ P @ H.T + R_GNSS
 
         assert v.shape == (
             3,), f"ESKF.innovation_GNSS: v shape incorrect {v.shape}"
