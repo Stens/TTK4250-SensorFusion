@@ -433,23 +433,32 @@ class ESKF:
         ), f"ESKF.inject: delta_x shape incorrect {delta_x.shape}"
         assert P.shape == (15, 15), f"ESKF.inject: P shape incorrect {P.shape}"
 
-        # Useful concatenation of indices
         # All injection indices, minus the attitude
         INJ_IDX = POS_IDX + VEL_IDX + ACC_BIAS_IDX + GYRO_BIAS_IDX
         # All error indices, minus the attitude
         DTX_IDX = POS_IDX + VEL_IDX + ERR_ACC_BIAS_IDX + ERR_GYRO_BIAS_IDX
 
         x_injected = x_nominal.copy()
-        # TODO: Inject error state into nominal state (except attitude / quaternion)
-        # TODO: Inject attitude
-        # TODO: Normalize quaternion
+
+        # Inject error state into nominal state (except attitude / quaternion)
+        x_injected[INJ_IDX] += delta_x[DTX_IDX]
+
+        # Inject attitude
+        x_injected[ATT_IDX] = quaternion_product(
+            x_nominal[ATT_IDX], delta_x[ERR_ATT_IDX])
+
+        # Normalize quaternion
+        x_injected[ATT_IDX] = x_injected[ATT_IDX] / \
+            la.norm(np.ravel(x_injected[ATT_IDX]))
 
         # Covariance
-        # TODO: Compensate for injection in the covariances
-        G_injected = np.zeros((1,))
-        P_injected = np.zeros(
-            (15, 15)
-        )  # TODO: Compensate for injection in the covariances
+        # Compensate for injection in the covariances
+        # Implements Eq. (10.86) :
+        G_injected = np.eye(6 + 3 + 6)
+        G_injected[CatSlice(start=6, stop=(6+3)) **
+                   2] -= cross_product_matrix(1/2*delta_x[ERR_ATT_IDX])
+
+        P_injected = G_injected @ P @ G_injected.T
 
         assert x_injected.shape == (
             16,
