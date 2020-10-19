@@ -294,19 +294,25 @@ class ESKF:
         A = self.Aerr(x_nominal, acceleration, omega)
         G = self.Gerr(x_nominal)
 
-        V = np.reshape(Ts * np.array([
-            [-1 * A, G @ self.Q_err @ G.T],
-            [np.zeros((15, 15)), A.T]
-        ]), (30, 30))
+        V = np.zeros((30, 30))
+        # Diagonals:
+        V[CatSlice(start=0, stop=15)**2] = -1 * A
+        V[CatSlice(start=15, stop=30)**2] = A.T
+        # Off diagonals:
+        V[CatSlice(start=0, stop=15)*CatSlice(start=15, stop=30)
+          ] = G @ self.Q_err @ G.T
+
+        V *= Ts
+
         assert V.shape == (
             30,
             30,
         ), f"ESKF.discrete_error_matrices: Van Loan matrix shape incorrect {omega.shape}"
         VanLoanMatrix = la.expm(V)  # This can be slow...
 
-        Ad = VanLoanMatrix[CatSlice(
-            start=15, stop=30) * CatSlice(start=15, stop=30)]
-        GQGd = VanLoanMatrix[CatSlice(
+        Ad = (VanLoanMatrix[CatSlice(
+            start=15, stop=30) * CatSlice(start=15, stop=30)]).T
+        GQGd = Ad @ VanLoanMatrix[CatSlice(
             start=0, stop=15) * CatSlice(start=15, stop=30)]
 
         assert Ad.shape == (
@@ -610,7 +616,7 @@ class ESKF:
         I = np.eye(*P.shape)
 
         innovation, S = self.innovation_GNSS_position(
-            x_nominal, P, z_GNSS_position, R_GNSS, lever_arm
+            x_nominal, P, z_GNSS_position, R_GNSS, lever_arm=lever_arm
         )
 
         H = self.H(x_nominal)
@@ -683,7 +689,7 @@ class ESKF:
         ), "ESKF.NIS_GNSS: lever_arm shape incorrect " + str(lever_arm.shape)
 
         v, S = self.innovation_GNSS_position(
-            x_nominal, P, z_GNSS_position, R_GNSS, lever_arm
+            x_nominal, P, z_GNSS_position, R_GNSS, lever_arm=lever_arm
         )
 
         cholS = la.cholesky(S, lower=True)
