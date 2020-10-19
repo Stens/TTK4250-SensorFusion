@@ -120,6 +120,7 @@ class EKF:
         R = self.sensor_model.R(x)
         I = np.eye(P.shape[0])
         x_upd = x + W @ v
+        # P_upd written on Joseph form form to avoid non positive semidefinite matrix
         P_upd = (I - W @ H) @ P @ (I - W @ H).T + W @ R @ W.T
         ekfstate_upd = GaussParams(x_upd, P_upd)
         return ekfstate_upd

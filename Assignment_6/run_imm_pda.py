@@ -1,5 +1,6 @@
 # %% imports
 from typing import List
+import sys
 
 import scipy
 import scipy.io
@@ -84,12 +85,12 @@ for Zk, xgtk in zip(Z, Xgt):
         Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
     Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
 
-ax1.scatter(*Z_plot_data.T, s=5, color="C1")
-ax1.plot(*Xgt.T[:2], color="C0", linewidth=1.5)
+ax1.scatter(*Z_plot_data.T, s=10, color="r")
+ax1.plot(*Xgt.T[:2], color="C0", linewidth=3.5)
 ax1.set_title("True trajectory and the nearby measurements")
 plt.show(block=False)
 
-# %% play measurement movie. Remember that you can cross out the window
+# %% play measurement movie.
 play_movie = False
 play_slice = slice(0, K)
 if play_movie:
@@ -123,7 +124,7 @@ gate_size = 2.5
 # dynamic models
 sigma_a_CV = 0.3
 sigma_a_CT = 0.3
-sigma_omega = 1e-2 * np.pi
+sigma_omega = 3e-3 * np.pi
 
 
 # markov chain
@@ -135,8 +136,8 @@ p10 = 0.5  # initvalue for mode probabilities
 PI = np.array([[PI11, (1 - PI11)], [(1 - PI22), PI22]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
-mean_init = np.array(Xgt[0, :])
-cov_init = np.diag([20, 20, 5, 5, 0.1]) ** 2
+mean_init = np.array(Xgt[0, :])  # Cheating. Can avoid this with e.g IPDA
+cov_init = np.diag([20, 20, 1, 0, 0.01]) ** 2
 mode_probabilities_init = np.array([p10, (1 - p10)])
 mode_states_init = GaussParams(mean_init, cov_init)
 init_imm_state = MixtureParameters(
@@ -149,16 +150,16 @@ assert np.allclose(
 # make model
 measurement_model = measurementmodels.CartesianPosition(sigma_z, state_dim=5)
 dynamic_models: List[dynamicmodels.DynamicModel] = []
+
 dynamic_models.append(dynamicmodels.WhitenoiseAccelleration(sigma_a_CV, n=5))
 dynamic_models.append(dynamicmodels.ConstantTurnrate(sigma_a_CT, sigma_omega))
+
 ekf_filters = []
 ekf_filters.append(ekf.EKF(dynamic_models[0], measurement_model))
 ekf_filters.append(ekf.EKF(dynamic_models[1], measurement_model))
 imm_filter = imm.IMM(ekf_filters, PI)
 
 tracker = pda.PDA(imm_filter, clutter_intensity, PD, gate_size)
-
-# init_imm_pda_state = tracker.init_filter_state(init__immstate)
 
 
 NEES = np.zeros(K)
@@ -309,7 +310,8 @@ def plot_cov_ellipse2d(
 
 
 play_estimation_movie = False
-mTL = 0.2  # maximum transparancy (between 0 and 1);
+if not play_estimation_movie:
+    sys.exit()
 plot_pause = 2  # lenght to pause between time steps;
 start_k = 1
 end_k = 10

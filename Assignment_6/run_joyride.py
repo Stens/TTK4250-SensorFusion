@@ -33,23 +33,24 @@ ownship = loaded_data["ownship"]
 
 
 # plot measurements close to the trajectory
+show_measurements = True
 
-# plot measurements close to the trajectory
-fig1, ax1 = plt.subplots(num=1, clear=True)
+if show_measurements:
+    fig1, ax1 = plt.subplots(num=1, clear=True)
 
-Z_plot_data = np.empty((0, 2), dtype=float)
-plot_measurement_distance = 45
-for Zk, xgtk in zip(Z, Xgt):
-    to_plot = np.linalg.norm(
-        Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
-    Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
+    Z_plot_data = np.empty((0, 2), dtype=float)
+    plot_measurement_distance = 45
+    for Zk, xgtk in zip(Z, Xgt):
+        to_plot = np.linalg.norm(
+            Zk - xgtk[None:2], axis=1) <= plot_measurement_distance
+        Z_plot_data = np.append(Z_plot_data, Zk[to_plot], axis=0)
 
-ax1.scatter(*Z_plot_data.T, color="C1")
-ax1.plot(*Xgt.T[:2], color="C0", linewidth=1.5)
-ax1.set_title("True trajectory and the nearby measurements")
-# plt.show()
+    ax1.scatter(*Z_plot_data.T, color="C1")
+    ax1.plot(*Xgt.T[:2], color="C0", linewidth=1.5)
+    ax1.set_title("True trajectory and the nearby measurements")
+    plt.show()
 
-# %% play measurement movie. Remember that you can cross out the window
+# %% play measurement movie.
 play_movie = False
 play_slice = slice(0, K)
 if play_movie:
@@ -81,14 +82,14 @@ gate_size = 2.5
 sigma_a_CV = 1.
 sigma_a_CV_high = 10
 sigma_a_CT = 1.
-sigma_omega = 0.0005*np.pi
+sigma_omega = 3e-3*np.pi
 
 # markov chain
 
 p10 = 0.9  # initvalue for mode probabilities
 PI = np.array([[0.85, 0.15], [0.15, 0.85]])
 PI = np.array(
-    [[0.9, 0.05, 0.05], [0.025, 0.95, 0.025], [0.15, 0.15, 0.7]])
+    [[0.9, 0.05, 0.05], [0.05, 0.9, 0.05], [0.15, 0.15, 0.7]])
 assert np.allclose(np.sum(PI, axis=1), 1), "rows of PI must sum to 1"
 
 mean_init = np.array([*Xgt[0, :], 0])
@@ -113,4 +114,5 @@ imm_filter = imm.IMM(ekf_filters, PI)
 
 tracker = pda.PDA(imm_filter, clutter_intensity, PD, gate_size)
 
+# Code for plotting and statistics is located in another file
 run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter)

@@ -140,9 +140,8 @@ def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter, model
     ANEESpos = np.mean(NEESpos)
     ANEESvel = np.mean(NEESvel)
     ANEES = np.mean(NEES)
-    # %%
 
-    # %% plots
+    #  plots
     # trajectory
     fig3, axs3 = plt.subplots(1, 2, num=3, clear=True)
     axs3[0].plot(*x_hat.T[:2], label=r"$\hat x$")
@@ -196,7 +195,6 @@ def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter, model
                  np.linalg.norm(x_hat[:, 2:4] - Xgt[:, 2:4], axis=1))
     axs5[1].set_ylabel("velocity error")
 
-    mTL = 0.2  # maximum transparancy (between 0 and 1);
     plot_pause = 0.2  # lenght to pause between time steps;
     start_k = 1
     end_k = 199
@@ -224,8 +222,6 @@ def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter, model
         pl = []
         cl = []
         gated = tracker.gate(Zk, pred_k)
-        minG = 1e20 * np.ones(2)
-        maxG = np.zeros(2)
         cond_upd_k = tracker.conditional_update(Zk[gated], pred_k)
         beta_k = tracker.association_probabilities(Zk[gated], pred_k)
         for s in range(2):
@@ -260,7 +256,7 @@ def run_plots(Z, Xgt, Ts, ownship, K, tracker, init_imm_state, imm_filter, model
                 [0, 0], pred_k.components[s])
 
             meas_sc.set_offsets(Zk)
-            if not has_plotted:
+            if not has_plotted:  # Hacky way to get labels
                 pl.append(axs6[0].scatter(
                     *Zk.T, color="r", marker="x", label="meas"))
                 pl.append(axs6[0].scatter(*Xk.T, color="b",
