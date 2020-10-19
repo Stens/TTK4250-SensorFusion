@@ -5,6 +5,7 @@ import scipy.stats
 
 import matplotlib
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 try:  # see if tqdm is available, otherwise define it as a dummy
@@ -89,7 +90,7 @@ except Exception as e:
     )
 
 # %% load data and plot
-filename_to_load = "task_simulation.mat"
+filename_to_load = "./Assignment_7/task_simulation.mat"
 loaded_data = scipy.io.loadmat(filename_to_load)
 
 S_a = loaded_data["S_a"]
@@ -190,7 +191,7 @@ dummy = eskf.update_GNSS_position(
 # run this file with 'python -O run_INS_simulated.py' to turn of assertions and get about 8/5 speed increase for longer runs
 
 # TODO: choose a small value to begin with (500?), and gradually increase as you OK results
-N: int = 500
+N: int = steps
 doGNSS: bool = True  # TODO: Set this to False if you want to check that the predictions make sense over reasonable time lenghts
 
 GNSSk: int = 0  # keep track of current step in GNSS measurements
@@ -233,12 +234,13 @@ for k in tqdm(range(N)):
 fig1 = plt.figure(1)
 ax = plt.axes(projection="3d")
 
-ax.plot3D(x_est[:N, 1], x_est[:N, 0], -x_est[:N, 2])
-ax.plot3D(z_GNSS[:GNSSk, 1], z_GNSS[:GNSSk, 0], -z_GNSS[:GNSSk, 2])
+ax.plot3D(x_est[:N, 1], x_est[:N, 0], -x_est[:N, 2], label="x_est")
+ax.plot3D(z_GNSS[:GNSSk, 1], z_GNSS[:GNSSk, 0], -
+          z_GNSS[:GNSSk, 2], label="x_gt")
 ax.set_xlabel("East [m]")
 ax.set_ylabel("North [m]")
 ax.set_zlabel("Altitude [m]")
-
+ax.legend()
 
 # state estimation
 t = np.linspace(0, dt * (N - 1), N)
@@ -442,5 +444,5 @@ axs6[2].legend(['NEES pos', 'NEES vel', 'NEES att',
                 'NEES accbias', 'NEES gyrobias', 'gauss (3 dim)'])
 plt.grid()
 
-
+plt.show()
 # %%

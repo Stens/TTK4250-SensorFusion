@@ -1,4 +1,5 @@
 # %% imports
+import math
 from typing import Tuple, Sequence, Any
 from dataclasses import dataclass, field
 from cat_slice import CatSlice
@@ -120,16 +121,23 @@ class ESKF:
 
         R = quaternion_to_rotation_matrix(quaternion, debug=self.debug)
 
+        # Using the formulas given in the hint for task 2a):
         position_prediction = position + Ts * velocity + \
-            (Ts**2)/2 * (R @ acceleration + self.g)
+            0.5*(Ts**2) * (R @ acceleration + self.g)
         velocity_prediction = velocity + Ts * (R @ acceleration + self.g)
 
+        k = Ts*omega
+        knorm = la.norm(k)
         quaternion_prediction = quaternion_product(
-            quaternion, np.exp(Ts*omega/2))
+            quaternion,
+            np.array([
+                np.cos(knorm/2),
+                *(np.sin(knorm/2)*k.T/knorm)
+            ]))
 
         # Normalize quaternion
         quaternion_prediction = quaternion_prediction / \
-            la.norm(np.ravel(quaternion_prediction))
+            la.norm(quaternion_prediction)
 
         acceleration_bias_prediction = acceleration_bias - \
             Ts * self.p_acc * np.eye(3) @ acceleration_bias
@@ -480,12 +488,13 @@ class ESKF:
         x_injected[INJ_IDX] += delta_x[DTX_IDX]
 
         # Inject attitude
+        dx_quat = euler_to_quaternion(delta_x[ERR_ATT_IDX])
         x_injected[ATT_IDX] = quaternion_product(
-            x_nominal[ATT_IDX], delta_x[ERR_ATT_IDX])
+            x_nominal[ATT_IDX], dx_quat)
 
         # Normalize quaternion
         x_injected[ATT_IDX] = x_injected[ATT_IDX] / \
-            la.norm(np.ravel(x_injected[ATT_IDX]))
+            la.norm(x_injected[ATT_IDX])
 
         # Covariance
         # Compensate for injection in the covariances
