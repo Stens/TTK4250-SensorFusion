@@ -11,7 +11,7 @@ def cross_product_matrix(n: ArrayLike, debug: bool = True) -> np.ndarray:
     S = np.array([
         [0, -1 * vector[2], vector[1]],
         [vector[2], 0, -1 * vector[0]],
-        [-1*vector[2], vector[1], 0]
+        [-1*vector[1], vector[0], 0]
     ])
     if debug:
         assert S.shape == (

@@ -48,6 +48,7 @@ class ESKF:
     g: np.ndarray = np.array([0, 0, 9.82])  # Ja, i NED-land, der kan alt gå an
 
     Q_err: np.array = field(init=False, repr=False)
+    H_x: np.array = field(init=False, repr=False)
 
     def __post_init__(self):
         if self.debug:
@@ -64,6 +65,11 @@ class ESKF:
             )
             ** 2
         )
+
+        # Measurement matrix:
+        # Implements Eq. (10.80)
+        self.H_x = np.zeros((3, 16))
+        self.H_x[CatSlice(start=0, stop=3) * POS_IDX] = np.eye(3)
 
     def predict_nominal(
         self,
@@ -147,8 +153,9 @@ class ESKF:
 
     def H(self, x_nominal: np.ndarray) -> np.ndarray:
         # Implements Eq. (10.78) :
-        eta, eps = x_nominal[ATT_IDX]
-        Q_dtheta = 1/2 * np.array([
+        eta, *eps = x_nominal[ATT_IDX]
+        eps = np.array(eps)
+        Q_dtheta = 1/2. * np.array([
             -1 * eps,
             [eta, -1*eps[2], eps[1]],
             [eps[2], eta, -1*eps[0]],
@@ -156,16 +163,15 @@ class ESKF:
         ])
 
         # Implements Eq. (10.77) :
-        X_dx = np.eye(6 + 4 + 6)
-        X_dx[CatSlice(start=6, stop=6+4)**2] = Q_dtheta
-
-        # Measurement matrix:
-        # (We only want to update position)
-        H_x = np.zeros((3, 15))
-        H_x[CatSlice(start=0, stop=3) * POS_IDX] = np.eye(3)
+        X_dx = np.zeros((16, 15))
+        X_dx[CatSlice(start=0, stop=6)**2] = np.eye(6)
+        X_dx[CatSlice(start=6, stop=6+4) *
+             CatSlice(start=6, stop=6+3)] = Q_dtheta
+        X_dx[CatSlice(start=10, stop=16) *
+             CatSlice(start=9, stop=15)] = np.eye(6)
 
         # Implements (10.76) :
-        H = H_x @ X_dx
+        H = self.H_x @ X_dx
 
         return H
 
@@ -290,7 +296,7 @@ class ESKF:
 
         V = np.reshape(Ts * np.array([
             [-1 * A, G @ self.Q_err @ G.T],
-            [np.zeros(15, 15), A.T]
+            [np.zeros((15, 15)), A.T]
         ]), (30, 30))
         assert V.shape == (
             30,
@@ -540,7 +546,7 @@ class ESKF:
         H = self.H(x_nominal)
 
         # Innovation step as per standard KF:
-        v = z_GNSS_position - H @ x_nominal
+        v = z_GNSS_position - self.H_x @ x_nominal
 
         # leverarm compensation
         if not np.allclose(lever_arm, 0):
@@ -722,7 +728,7 @@ class ESKF:
         delta_quaternion = quaternion_product(quaternion_conj, x_true[ATT_IDX])
 
         # The error state
-        delta_theta = 2 * delta_quaternion[2:4]
+        delta_theta = quaternion_to_euler(delta_quaternion)
 
         # Concatenation of bias indices
         BIAS_IDX = ACC_BIAS_IDX + GYRO_BIAS_IDX
@@ -765,11 +771,12 @@ class ESKF:
         d_x = cls.delta_x(x_nominal, x_true)
 
         NEES_all = cls._NEES(d_x, P)
-        NEES_pos = cls._NEES(d_x[POS_IDX], P)
-        NEES_vel = cls._NEES(d_x[VEL_IDX], P)
-        NEES_att = cls._NEES(d_x[ATT_IDX], P)
-        NEES_accbias = cls._NEES(d_x[ACC_BIAS_IDX], P)
-        NEES_gyrobias = cls._NEES(d_x[GYRO_BIAS_IDX], P)
+        NEES_pos = cls._NEES(d_x[POS_IDX], P[POS_IDX**2])
+        NEES_vel = cls._NEES(d_x[VEL_IDX], P[VEL_IDX**2])
+        NEES_att = cls._NEES(d_x[ERR_ATT_IDX], P[ERR_ATT_IDX**2])
+        NEES_accbias = cls._NEES(d_x[ERR_ACC_BIAS_IDX], P[ERR_ACC_BIAS_IDX**2])
+        NEES_gyrobias = cls._NEES(
+            d_x[ERR_GYRO_BIAS_IDX], P[ERR_GYRO_BIAS_IDX**2])
 
         NEESes = np.array(
             [NEES_all, NEES_pos, NEES_vel, NEES_att, NEES_accbias, NEES_gyrobias]

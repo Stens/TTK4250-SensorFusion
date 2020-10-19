@@ -1,3 +1,4 @@
+from cat_slice import CatSlice
 import numpy as np
 import math
 from utils import cross_product_matrix
@@ -37,16 +38,19 @@ def quaternion_product(ql: np.ndarray, qr: np.ndarray) -> np.ndarray:
             f"utils.quaternion_product: Quaternion multiplication error, right quaternion wrong shape: {qr.shape}"
         )
 
-    eps_matr = np.array([
-        [0, -1 * epsilon_left.T],
-        [epsilon_left, cross_product_matrix(epsilon_left)]
-    ])
+    eps_matr = np.zeros((4, 4))
+    eps_matr[CatSlice(start=0, stop=1) * CatSlice(start=1,
+                                                  stop=4)] = -1 * epsilon_left.T
+    eps_matr[CatSlice(start=1, stop=4) *
+             CatSlice(start=0, stop=1)] = epsilon_left
+    eps_matr[CatSlice(start=1, stop=4)**2] = cross_product_matrix(epsilon_left)
 
     # Eq. (10.34) :
-    quaternion = (eta_left * np.eye(2) + eps_matr) @ q_right
+    quaternion = (eta_left * np.eye(4) + eps_matr).dot(q_right)
 
     # Ensure result is of correct shape
     quaternion = quaternion.ravel()
+    # print(quaternion)
     assert quaternion.shape == (
         4,
     ), f"utils.quaternion_product: Quaternion multiplication error, result quaternion wrong shape: {quaternion.shape}"
@@ -107,9 +111,9 @@ def quaternion_to_euler(quaternion: np.ndarray) -> np.ndarray:
 
     assert quaternion.shape == (
         4,
-    ), f"quaternion.quaternion_to_euler: Quaternion shape incorrect {quaternion.shape}"
+    ), f"quaternion.quaternion_to_euler: Quaternion @shape incorrect {quaternion.shape}"
 
-    [eta, eps] = quaternion
+    eta, *eps = quaternion
     # quaternion_squared = quaternion ** 2
 
     # Eq. (10.38) :
