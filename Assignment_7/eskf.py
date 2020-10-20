@@ -46,7 +46,7 @@ class ESKF:
     S_g: np.ndarray = np.eye(3)
     debug: bool = True
 
-    g: np.ndarray = np.array([0, 0, 9.82])  # Ja, i NED-land, der kan alt gå an
+    g: np.ndarray = np.array([0, 0, 9.82])
 
     Q_err: np.array = field(init=False, repr=False)
     H_x: np.array = field(init=False, repr=False)
@@ -302,15 +302,10 @@ class ESKF:
         A = self.Aerr(x_nominal, acceleration, omega)
         G = self.Gerr(x_nominal)
 
-        V = np.zeros((30, 30))
-        # Diagonals:
-        V[CatSlice(start=0, stop=15)**2] = -1 * A
-        V[CatSlice(start=15, stop=30)**2] = A.T
-        # Off diagonals:
-        V[CatSlice(start=0, stop=15)*CatSlice(start=15, stop=30)
-          ] = G @ self.Q_err @ G.T
-
-        V *= Ts
+        V = Ts * np.vstack((
+            np.hstack((-1*A, G @ self.Q_err @ G.T)),
+            np.hstack((np.zeros((15, 15)), A.T))
+        ))
 
         assert V.shape == (
             30,
@@ -318,10 +313,8 @@ class ESKF:
         ), f"ESKF.discrete_error_matrices: Van Loan matrix shape incorrect {omega.shape}"
         VanLoanMatrix = la.expm(V)  # This can be slow...
 
-        Ad = (VanLoanMatrix[CatSlice(
-            start=15, stop=30) * CatSlice(start=15, stop=30)]).T
-        GQGd = Ad @ VanLoanMatrix[CatSlice(
-            start=0, stop=15) * CatSlice(start=15, stop=30)]
+        Ad = VanLoanMatrix[15:, 15:].T
+        GQGd = Ad @ VanLoanMatrix[:15, 15:]
 
         assert Ad.shape == (
             15,

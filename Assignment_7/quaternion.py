@@ -1,4 +1,3 @@
-from cat_slice import CatSlice
 import numpy as np
 import math
 from utils import cross_product_matrix
@@ -38,12 +37,10 @@ def quaternion_product(ql: np.ndarray, qr: np.ndarray) -> np.ndarray:
             f"utils.quaternion_product: Quaternion multiplication error, right quaternion wrong shape: {qr.shape}"
         )
 
-    eps_matr = np.zeros((4, 4))
-    eps_matr[CatSlice(start=0, stop=1) * CatSlice(start=1,
-                                                  stop=4)] = -1 * epsilon_left.T
-    eps_matr[CatSlice(start=1, stop=4) *
-             CatSlice(start=0, stop=1)] = epsilon_left
-    eps_matr[CatSlice(start=1, stop=4)**2] = cross_product_matrix(epsilon_left)
+    eps_matr = np.vstack((
+        np.hstack(([[1]], -1 * epsilon_left.T)),
+        np.hstack((epsilon_left, cross_product_matrix(epsilon_left)))
+    ))
 
     # Eq. (10.34) :
     quaternion = (eta_left * np.eye(4) + eps_matr).dot(q_right)
