@@ -113,26 +113,17 @@ steps = len(z_acceleration)
 gnss_steps = len(z_GNSS)
 
 # %% Measurement noise
-# Continous noise
-cont_gyro_noise_std = 4.36e-5
-cont_acc_noise_std = 1.167e-3
-# Discrete sample noise at simulation rate used
-rate_std = 0.5 * cont_gyro_noise_std*np.sqrt(1/dt)
-acc_std = 0.5 * cont_acc_noise_std*np.sqrt(1/dt)
-
-# Bias values
-rate_bias_driving_noise_std = 5e-5
-cont_rate_bias_driving_noise_std = rate_bias_driving_noise_std/np.sqrt(1/dt)
-
-
-acc_bias_driving_noise_std = 4e-3   # Correct
-cont_acc_bias_driving_noise_std = acc_bias_driving_noise_std/np.sqrt(1/dt)
+rate_std = 0.15 * (np.pi / 180) * (1 / 60)
+acc_std = 0.06 * (1 / 60)
+cont_rate_bias_driving_noise_std = 0.5 * \
+    (np.pi / 180) * (1 / (60 * 60))
+cont_acc_bias_driving_noise_std = 0.05e-3 * 9.81
 
 
 # Position and velocity measurement
-p_acc = 1e-3  # TODO
+p_acc = 1e-16  # TODO
 
-p_gyro = 1e-3  # TODO
+p_gyro = 1e-16  # TODO
 
 # %% Estimator
 eskf = ESKF(
