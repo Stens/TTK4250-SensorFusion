@@ -90,7 +90,7 @@ except Exception as e:
     )
 
 # %% load data and plot
-filename_to_load = "./Assignment_7/task_simulation.mat"
+filename_to_load = "./task_simulation.mat"
 loaded_data = scipy.io.loadmat(filename_to_load)
 
 S_a = loaded_data["S_a"]

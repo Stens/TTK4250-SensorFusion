@@ -38,7 +38,7 @@ def quaternion_product(ql: np.ndarray, qr: np.ndarray) -> np.ndarray:
         )
 
     eps_matr = np.vstack((
-        np.hstack(([[1]], -1 * epsilon_left.T)),
+        np.hstack(([[0]], -1 * epsilon_left.T)),
         np.hstack((epsilon_left, cross_product_matrix(epsilon_left)))
     ))
 

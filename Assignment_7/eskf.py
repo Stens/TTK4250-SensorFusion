@@ -311,7 +311,8 @@ class ESKF:
             30,
             30,
         ), f"ESKF.discrete_error_matrices: Van Loan matrix shape incorrect {omega.shape}"
-        VanLoanMatrix = la.expm(V)  # This can be slow...
+        # VanLoanMatrix = la.expm(V)
+        VanLoanMatrix = np.eye(*V.shape) + V + V @ V / 2
 
         Ad = VanLoanMatrix[15:, 15:].T
         GQGd = Ad @ VanLoanMatrix[:15, 15:]
@@ -492,9 +493,8 @@ class ESKF:
         # Covariance
         # Compensate for injection in the covariances
         # Implements Eq. (10.86) :
-        G_injected = np.eye(6 + 3 + 6)
-        G_injected[CatSlice(start=6, stop=(6+3)) **
-                   2] -= cross_product_matrix(1/2*delta_x[ERR_ATT_IDX])
+        G_injected = la.block_diag(np.eye(6), np.eye(
+            3) - cross_product_matrix(1/2*delta_x[ERR_ATT_IDX]), np.eye(6))
 
         P_injected = G_injected @ P @ G_injected.T
 
@@ -634,7 +634,7 @@ class ESKF:
         W = P @ la.solve(S, H).T
         delta_x = W @ innovation
         Jo = I - W @ H  # for Joseph form
-        P_update = Jo @ P
+        P_update = Jo @ P @ Jo.T + W @ R_GNSS @ W.T
 
         # error state injection
         x_injected, P_injected = self.inject(x_nominal, delta_x, P_update)

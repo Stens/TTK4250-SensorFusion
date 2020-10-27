@@ -7,8 +7,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-try: # see if tqdm is available, otherwise define it as a dummy
-    try: # Ipython seem to require different tqdm.. try..except seem to be the easiest way to check
+try:  # see if tqdm is available, otherwise define it as a dummy
+    try:  # Ipython seem to require different tqdm.. try..except seem to be the easiest way to check
         __IPYTHON__
         from tqdm.notebook import tqdm
     except:
@@ -89,10 +89,10 @@ except Exception as e:
     )
 
 # %% load data and plot
-filename_to_load = "task_real.mat"
+filename_to_load = "./task_real.mat"
 loaded_data = scipy.io.loadmat(filename_to_load)
 
-do_corrections = True # TODO: set to false for the last task
+do_corrections = True  # TODO: set to false for the last task
 if do_corrections:
     S_a = loaded_data['S_a']
     S_g = loaded_data['S_g']
@@ -114,24 +114,25 @@ gnss_steps = len(z_GNSS)
 
 # %% Measurement noise
 # Continous noise
-cont_gyro_noise_std = # TODO
-cont_acc_noise_std = # TODO
-
+cont_gyro_noise_std = 4.36e-5
+cont_acc_noise_std = 1.167e-3
 # Discrete sample noise at simulation rate used
-rate_std = cont_gyro_noise_std*np.sqrt(1/dt)
-acc_std  = cont_acc_noise_std*np.sqrt(1/dt)
+rate_std = 0.5 * cont_gyro_noise_std*np.sqrt(1/dt)
+acc_std = 0.5 * cont_acc_noise_std*np.sqrt(1/dt)
 
 # Bias values
-rate_bias_driving_noise_std = # TODO
+rate_bias_driving_noise_std = 5e-5
 cont_rate_bias_driving_noise_std = rate_bias_driving_noise_std/np.sqrt(1/dt)
 
-acc_bias_driving_noise_std = # TODO
+
+acc_bias_driving_noise_std = 4e-3   # Correct
 cont_acc_bias_driving_noise_std = acc_bias_driving_noise_std/np.sqrt(1/dt)
 
-# Position and velocity measurement
-p_acc = # TODO
 
-p_gyro = # TODO
+# Position and velocity measurement
+p_acc = 1e-16  # TODO
+
+p_gyro = 1e-16  # TODO
 
 # %% Estimator
 eskf = ESKF(
@@ -141,9 +142,9 @@ eskf = ESKF(
     cont_rate_bias_driving_noise_std,
     p_acc,
     p_gyro,
-    S_a = S_a, # set the accelerometer correction matrix
-    S_g = S_g, # set the gyro correction matrix,
-    debug=True # False to avoid expensive debug checks
+    S_a=S_a,  # set the accelerometer correction matrix
+    S_g=S_g,  # set the gyro correction matrix,
+    debug=True  # False to avoid expensive debug checks
 )
 
 
@@ -157,8 +158,8 @@ P_pred = np.zeros((steps, 15, 15))
 NIS = np.zeros(gnss_steps)
 
 # %% Initialise
-x_pred[0, POS_IDX] = np.array([0, 0, 0]) # starting 5 metres above ground
-x_pred[0, VEL_IDX] = np.array([0, 0, 0]) # starting at 20 m/s due north
+x_pred[0, POS_IDX] = np.array(z_GNSS[0])
+x_pred[0, VEL_IDX] = np.array([0, 0, 0])
 x_pred[0, ATT_IDX] = np.array([
     np.cos(45 * np.pi / 180),
     0, 0,
@@ -166,48 +167,56 @@ x_pred[0, ATT_IDX] = np.array([
 ])  # nose to east, right to south and belly down.
 
 P_pred[0][POS_IDX**2] = 10**2 * np.eye(3)
-P_pred[0][VEL_IDX**2] = 3**2 * np.eye(3)
-P_pred[0][ERR_ATT_IDX**2] = (np.pi/30)**2 * np.eye(3) # error rotation vector (not quat)
-P_pred[0][ERR_ACC_BIAS_IDX**2] = 0.05**2 * np.eye(3)
-P_pred[0][ERR_GYRO_BIAS_IDX**2] = (1e-3)**2 * np.eye(3)
+P_pred[0][VEL_IDX**2] = 1**2 * np.eye(3)
+# error rotation vector (not quat)
+P_pred[0][ERR_ATT_IDX**2] = (np.pi/90)**4 * np.eye(3)
+P_pred[0][ERR_ACC_BIAS_IDX**2] = 0.05**4 * np.eye(3)
+P_pred[0][ERR_GYRO_BIAS_IDX**2] = (1e-3)**4 * np.eye(3)
 
 # %% Run estimation
 
+
 N = steps
 GNSSk = 0
-
+start = False
 for k in tqdm(range(N)):
-    if timeIMU[k] >= timeGNSS[GNSSk]:
-        R_GNSS = # TODO: Current GNSS covariance
-        NIS[GNSSk] = # TODO
 
-        x_est[k], P_est[k] = # TODO
-        if eskf.debug
-            assert np.all(np.isfinite(P_est[k])), f"Not finite P_pred at index {k}"
+    if timeIMU[k] >= timeGNSS[GNSSk]:
+        R_GNSS = accuracy_GNSS[GNSSk] ** 2 * np.eye(3)
+        NIS[GNSSk] = eskf.NIS_GNSS_position(
+            x_pred[k], P_pred[k], z_GNSS[GNSSk], R_GNSS, lever_arm=lever_arm)
+
+        x_est[k], P_est[k] = eskf.update_GNSS_position(
+            x_pred[k], P_pred[k], z_GNSS[GNSSk], R_GNSS, lever_arm=lever_arm)
+        if eskf.debug:
+            assert np.all(np.isfinite(P_est[k])
+                          ), f"Not finite P_pred at index {k}"
 
         GNSSk += 1
     else:
         # no updates, so estimate = prediction
-        x_est[k] = # TODO
-        P_est[k] = # TODO
+        x_est[k] = x_pred[k]
+        P_est[k] = P_pred[k]
 
     if k < N - 1:
-        x_pred[k + 1], P_pred[k + 1] = # TODO
+        x_pred[k + 1], P_pred[k + 1] = eskf.predict(
+            x_est[k], P_est[k], z_acceleration[k+1], z_gyroscope[k+1], dt)
 
     if eskf.debug:
-        assert np.all(np.isfinite(P_pred[k])), f"Not finite P_pred at index {k + 1}"
-
+        assert np.all(np.isfinite(P_pred[k])
+                      ), f"Not finite P_pred at index {k + 1}"
 
 # %% Plots
 
 fig1 = plt.figure(1)
 ax = plt.axes(projection='3d')
 
-ax.plot3D(x_est[0:N, 1], x_est[0:N, 0], -x_est[0:N, 2])
-ax.plot3D(z_GNSS[0:N, 1], z_GNSS[0:N, 0], -z_GNSS[0:N, 2])
+ax.plot3D(x_est[0:, 1], x_est[0:, 0], -x_est[0:, 2], color='g', linewidth=2)
+ax.plot3D(z_GNSS[:N, 1], z_GNSS[:N, 0], -
+          z_GNSS[:N, 2], alpha=0.4, color='r', linewidth=1)
 ax.set_xlabel('East [m]')
-ax.set_xlabel('North [m]')
-ax.set_xlabel('Altitude [m]')
+ax.set_ylabel('North [m]')
+ax.set_zlabel('Altitude [m]')
 
 plt.grid()
 
@@ -253,7 +262,8 @@ fig3 = plt.figure()
 plt.plot(NIS[:GNSSk])
 plt.plot(np.array([0, N-1]) * dt, (CI3@np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NIS) * (NIS <= CI3[1]))
-plt.title(f'NIS ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)')
+plt.title(
+    f'NIS ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)')
 plt.grid()
 
 # %% box plots
@@ -261,7 +271,8 @@ fig4 = plt.figure()
 
 gauss_compare = np.sum(np.random.randn(3, GNSSk)**2, axis=0)
 plt.boxplot([NIS[0:GNSSk], gauss_compare], notch=True)
-plt.legend('NIS', 'gauss')
+# plt.legend('NIS', 'gauss')
 plt.grid()
+plt.show()
 
 # %%
