@@ -130,9 +130,9 @@ cont_acc_bias_driving_noise_std = acc_bias_driving_noise_std/np.sqrt(1/dt)
 
 
 # Position and velocity measurement
-p_acc = 1e-16  # TODO
+p_acc = 1e-3  # TODO
 
-p_gyro = 1e-16  # TODO
+p_gyro = 1e-3  # TODO
 
 # %% Estimator
 eskf = ESKF(
