@@ -112,20 +112,20 @@ gnss_steps = len(z_GNSS)
 # IMU noise values for STIM300, based on datasheet and simulation sample rate
 # Continous noise
 # TODO: What to remove here?
-cont_gyro_noise_std = 4.36e-5  # (rad/s)/sqrt(Hz)
-cont_acc_noise_std = 1.167e-3  # (m/s**2)/sqrt(Hz)
+cont_gyro_noise_std = 5e-5  # (rad/s)/sqrt(Hz)
+cont_acc_noise_std = 1.5e-3  # (m/s**2)/sqrt(Hz)
 
 # Discrete sample noise at simulation rate used
 rate_std = 0.5 * cont_gyro_noise_std * np.sqrt(1 / dt)
 acc_std = 0.5 * cont_acc_noise_std * np.sqrt(1 / dt)
 
 # Bias values
-rate_bias_driving_noise_std = 5e-5
+rate_bias_driving_noise_std = 0.956e-4
 cont_rate_bias_driving_noise_std = (
     (1 / 3) * rate_bias_driving_noise_std / np.sqrt(1 / dt)
 )
 
-acc_bias_driving_noise_std = 4e-3
+acc_bias_driving_noise_std = 5e-3
 cont_acc_bias_driving_noise_std = 6 * \
     acc_bias_driving_noise_std / np.sqrt(1 / dt)
 
@@ -133,9 +133,9 @@ cont_acc_bias_driving_noise_std = 6 * \
 p_std = np.array([0.3, 0.3, 0.5])  # Measurement noise
 R_GNSS = np.diag(p_std ** 2)
 
-p_acc = 1e-16
+p_acc = 1e-12
 
-p_gyro = 1e-16
+p_gyro = 1e-8
 
 # %% Estimator
 eskf = ESKF(
@@ -182,11 +182,6 @@ P_pred[0][ERR_ATT_IDX ** 2] = 1e-5 * np.eye(3)
 P_pred[0][ERR_ACC_BIAS_IDX ** 2] = 1e-2 * np.eye(3)
 P_pred[0][ERR_GYRO_BIAS_IDX ** 2] = 1e-6 * np.eye(3)
 
-# %% Test: you can run this cell to test your implementation
-dummy = eskf.predict(x_pred[0], P_pred[0],
-                     z_acceleration[0], z_gyroscope[0], dt)
-dummy = eskf.update_GNSS_position(
-    x_pred[0], P_pred[0], z_GNSS[0], R_GNSS, lever_arm)
 # %% Run estimation
 # run this file with 'python -O run_INS_simulated.py' to turn of assertions and get about 8/5 speed increase for longer runs
 
@@ -222,7 +217,7 @@ for k in tqdm(range(N)):
 
     if k < N - 1:
         x_pred[k + 1], P_pred[k + 1] = eskf.predict(
-            x_est[k], P_est[k], z_acceleration[k], z_gyroscope[k], dt)
+            x_est[k], P_est[k], z_acceleration[k+1], z_gyroscope[k+1], dt)
 
     if eskf.debug:
         assert np.all(np.isfinite(P_pred[k])
@@ -368,43 +363,44 @@ CI3 = np.array(scipy.stats.chi2.interval(confprob, 3)).reshape((2, 1))
 
 fig5, axs5 = plt.subplots(7, 1, num=5, clear=True)
 
+
 axs5[0].plot(t, (NEES_all[:N]).T)
 axs5[0].plot(np.array([0, N - 1]) * dt, (CI15 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI15[0] <= NEES_all) * (NEES_all <= CI15[1]))
 axs5[0].set(
-    title=f"Total NEES ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"Total NEES ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
-axs5[0].set_ylim([0, 50])
+axs5[0].set_yscale("log")
 
 axs5[1].plot(t, (NEES_pos[0:N]).T)
 axs5[1].plot(np.array([0, N - 1]) * dt, (CI3 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NEES_pos) * (NEES_pos <= CI3[1]))
 axs5[1].set(
-    title=f"Position NEES ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"Position NEES ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
-axs5[1].set_ylim([0, 20])
+axs5[1].set_yscale("log")
 
 axs5[2].plot(t, (NEES_vel[0:N]).T)
 axs5[2].plot(np.array([0, N - 1]) * dt, (CI3 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NEES_vel) * (NEES_vel <= CI3[1]))
 axs5[2].set(
-    title=f"Velocity NEES ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"Velocity NEES ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
-axs5[2].set_ylim([0, 20])
+axs5[3].set_yscale("log")
 
 axs5[3].plot(t, (NEES_att[0:N]).T)
 axs5[3].plot(np.array([0, N - 1]) * dt, (CI3 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NEES_att) * (NEES_att <= CI3[1]))
 axs5[3].set(
-    title=f"Attitude NEES ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"Attitude NEES ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
-axs5[3].set_ylim([0, 20])
+axs5[4].set_yscale("log")
 
 axs5[4].plot(t, (NEES_accbias[0:N]).T)
 axs5[4].plot(np.array([0, N - 1]) * dt, (CI3 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NEES_accbias) * (NEES_accbias <= CI3[1]))
 axs5[4].set(
-    title=f"Accelerometer NEES ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"Accelerometer NEES ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
 axs5[4].set_ylim([0, 20])
 
@@ -412,17 +408,17 @@ axs5[5].plot(t, (NEES_gyrobias[0:N]).T)
 axs5[5].plot(np.array([0, N - 1]) * dt, (CI3 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NEES_gyrobias) * (NEES_gyrobias <= CI3[1]))
 axs5[5].set(
-    title=f"Gyro bias NEES ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"Gyro bias NEES ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
-axs5[5].set_ylim([0, 20])
+axs5[5].set_yscale("log")
 
 axs5[6].plot(NIS[:GNSSk])
 axs5[6].plot(np.array([0, N - 1]) * dt, (CI3 @ np.ones((1, 2))).T)
 insideCI = np.mean((CI3[0] <= NIS) * (NIS <= CI3[1]))
 axs5[6].set(
-    title=f"NIS ({100 *  insideCI:.1f} inside {100 * confprob} confidence interval)"
+    title=f"NIS ({100 *  insideCI:.1f}% inside {100 * confprob} confidence interval)"
 )
-axs5[6].set_ylim([0, 20])
+axs5[6].set_yscale("log")
 
 # boxplot
 fig6, axs6 = plt.subplots(1, 3)

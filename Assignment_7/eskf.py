@@ -794,7 +794,7 @@ class ESKF:
 
     @ classmethod
     def _NEES(cls, diff, P):
-        NEES = diff.T @ la.inv(P) @ diff
+        NEES = diff.T @ la.solve(P, diff)
         assert NEES >= 0, "ESKF._NEES: negative NEES"
         return NEES
 
