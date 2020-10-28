@@ -109,25 +109,12 @@ steps = len(z_acceleration)
 gnss_steps = len(z_GNSS)
 
 # %% Measurement noise
-# IMU noise values for STIM300, based on datasheet and simulation sample rate
-# Continous noise
-# TODO: What to remove here?
-cont_gyro_noise_std = 5e-5  # (rad/s)/sqrt(Hz)
-cont_acc_noise_std = 1.5e-3  # (m/s**2)/sqrt(Hz)
+rate_std = 0.00025
+acc_std = 0.0075
 
-# Discrete sample noise at simulation rate used
-rate_std = 0.5 * cont_gyro_noise_std * np.sqrt(1 / dt)
-acc_std = 0.5 * cont_acc_noise_std * np.sqrt(1 / dt)
-
-# Bias values
-rate_bias_driving_noise_std = 0.956e-4
-cont_rate_bias_driving_noise_std = (
-    (1 / 3) * rate_bias_driving_noise_std / np.sqrt(1 / dt)
-)
-
-acc_bias_driving_noise_std = 5e-3
-cont_acc_bias_driving_noise_std = 6 * \
-    acc_bias_driving_noise_std / np.sqrt(1 / dt)
+# Bias noise
+cont_rate_bias_driving_noise_std = 3.186e-06
+cont_acc_bias_driving_noise_std = 0.003
 
 # Position and velocity measurement
 p_std = np.array([0.3, 0.3, 0.5])  # Measurement noise
@@ -225,6 +212,8 @@ for k in tqdm(range(N)):
 
 
 # %% Plots
+
+print("NEES:", np.mean(NEES_all))
 
 fig1 = plt.figure(1)
 ax = plt.axes(projection="3d")
