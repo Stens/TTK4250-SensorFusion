@@ -94,9 +94,11 @@ K = len(z)
 M = len(landmarks)
 
 # %% Initilize
-Q = np.diag([0.520e-1**2*np.ones(2), 0.012**2])  # TODO
+Q = (0.520e-1**2)*np.eye(3)
+Q[2, 2] = 0.012**2
 R = np.diag([4e-2**2, 4e-2**2])  # TODO
-
+print("Q ===============")
+print(Q)
 doAsso = True
 
 # first is for joint compatibility, second is individual
@@ -107,11 +109,11 @@ JCBBalphas = np.array((0.000001, chi2.sf(4.5**2, 2)))
 slam = EKFSLAM(Q, R, do_asso=doAsso, alphas=JCBBalphas)
 
 # allocate
-eta_pred: List[Optional[np.ndarray]] = [None] * K
-P_pred: List[Optional[np.ndarray]] = [None] * K
-eta_hat: List[Optional[np.ndarray]] = [None] * K
-P_hat: List[Optional[np.ndarray]] = [None] * K
-a: List[Optional[np.ndarray]] = [None] * K
+eta_pred = np.array([None] * K)
+P_pred = np.array([None] * K)
+eta_hat = np.array([None] * K)
+P_hat = np.array([None] * K)
+a = np.array([None] * K)
 NIS = np.zeros(K)
 NISnorm = np.zeros(K)
 CI = np.zeros((K, 2))
@@ -143,11 +145,12 @@ print("starting sim (" + str(N) + " iterations)")
 for k, z_k in tqdm(enumerate(z[:N])):
 
     eta_hat[k], P_hat[k], NIS[k], a[k] = slam.update(
-        eta_pred, P_pred, z_k)  # TODO update
+        eta_pred[k], P_pred[k], z_k)  # TODO update
 
     if k < K - 1:
+        print("kjørr")
         eta_pred[k + 1], P_pred[k +
-                                1] = slam.predict(eta_hat, P_hat, odometry)  # TODO predict
+                                1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # TODO predict
 
     assert (
         eta_hat[k].shape[0] == P_hat[k].shape[0]
@@ -165,7 +168,7 @@ for k, z_k in tqdm(enumerate(z[:N])):
         CInorm[k].fill(1)
 
     # TODO, use provided function slam.NEESes
-    NEESes[k] = slam.NEESes(eta_hat, P_hat, poseGT[k])
+    NEESes[k] = slam.NEESes(eta_hat[k][:3], P_hat[k][:3, :3], poseGT[k])
 
     if doAssoPlot and k > 0:
         axAsso.clear()

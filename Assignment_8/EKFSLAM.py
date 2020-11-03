@@ -48,11 +48,12 @@ class EKFSLAM:
         """
         psi = x[2]
         theta = u[2]
-        row1 = np.array([x[0] + u[0]*np.cos(psi) - u[1]*np.sin(psi)])
-        row2 = np.array([x[1] + u[0]*np.sin(psi) + u[1]*np.cos(psi)])
+        row1 = x[0] + u[0]*np.cos(psi) - u[1]*np.sin(psi)
+        row2 = x[1] + u[0]*np.sin(psi) + u[1]*np.cos(psi)
         row3 = wrapToPi(psi + theta)
+
         # TODO, eq (11.7). Should wrap heading angle between (-pi, pi), see utils.wrapToPi
-        xpred = np.vstack((row1, row2, row3))
+        xpred = np.hstack((row1, row2, row3))
 
         assert xpred.shape == (3,), "EKFSLAM.f: wrong shape for xpred"
         return xpred
@@ -73,9 +74,9 @@ class EKFSLAM:
             The Jacobian of f wrt. x.
         """
         psi = x[2]
-        Fx = np.array([1, 0, -u[0]*np.sin(psi) - u[1]*np.cos(psi)],
-                      [0, 1, u[0]*np.cos(psi) - u[1]*np.sin(psi)],
-                      [0, 0, 1])  # TODO, eq (11.13)
+        Fx = np.array([[1, 0, -u[0]*np.sin(psi) - u[1]*np.cos(psi)],
+                       [0, 1, u[0]*np.cos(psi) - u[1]*np.sin(psi)],
+                       [0, 0, 1]])  # TODO, eq (11.13)
 
         assert Fx.shape == (3, 3), "EKFSLAM.Fx: wrong shape"
         return Fx
@@ -96,9 +97,9 @@ class EKFSLAM:
             The Jacobian of f wrt. u.
         """
         psi = x[2]
-        Fu = np.array([np.cos(psi), -np.sin(pis), 0],
-                      [np.sin(psi), np.cos(psi), 0],
-                      [0, 0, 1])  # TODO, eq (11.14)
+        Fu = np.array([[np.cos(psi), -np.sin(psi), 0],
+                       [np.sin(psi), np.cos(psi), 0],
+                       [0, 0, 1]])  # TODO, eq (11.14)
 
         assert Fu.shape == (3, 3), "EKFSLAM.Fu: wrong shape"
         return Fu
@@ -122,7 +123,7 @@ class EKFSLAM:
         Tuple[np.ndarray, np.ndarray], shapes= (3 + 2*#landmarks,), (3 + 2*#landmarks,)*2
             predicted mean and covariance of eta.
         """
-        # check inout matrix
+        # check input matrix
         assert np.allclose(P, P.T), "EKFSLAM.predict: not symmetric P input"
         assert np.all(
             np.linalg.eigvals(P) >= 0
@@ -145,7 +146,8 @@ class EKFSLAM:
         # cov matrix layout:
         # [[P_xx, P_xm],
         # [P_mx, P_mm]]
-        P[:3, :3] = Fx @ P[:3, :3] @ Fx.T + self.Q  # TODO robot cov prediction
+        P[:3, :3] = Fx @ P[:3, :3] @ Fx.T + \
+            Fu @ self.Q @ Fu.T  # TODO robot cov prediction
         P[:3, 3:] = Fx @ P[:3, 3:]  # TODO robot-map covariance prediction
         # TODO map-robot covariance: transpose of the above
         P[3:, :3] = P[3:, :3] @ Fx.T
@@ -327,13 +329,12 @@ class EKFSLAM:
 
         assert len(lmnew) % 2 == 0, "SLAM.add_landmark: lmnew not even length"
         # TODO, append new landmarks to state vector
-        etaadded = np.vstack((eta[:3], lmnew))
+        etaadded = np.hstack((eta, lmnew))
         # TODO, block diagonal of P_new, see problem text in 1g) in graded assignment 3
         Padded = la.block_diag(P, Gx@P[:3, :3]@Gx.T + Rall)
-        Padded[n:, :n] = P[:, :3]@Gx.T  # TODO, top right corner of P_new
+        Padded[n:, :n] = (P[:, :3] @ Gx.T).T  # TODO, top right corner of P_new
         # TODO, transpose of above. Should yield the same as calcualion, but this enforces symmetry and should be cheaper
-        Padded[:n, n:] = Gx@P[:3, :]
-
+        Padded[:n, n:] = Padded[n:, :n].T
         assert (
             etaadded.shape * 2 == Padded.shape
         ), "EKFSLAM.add_landmarks: calculated eta and P has wrong shape"
@@ -419,13 +420,13 @@ class EKFSLAM:
         Tuple[np.ndarray, np.ndarray, float, np.ndarray]
             [description]
         """
-        eta = np.array(eta)
-        numLmk = (eta.size - 3) // 2
-        assert (len(eta) - 3) % 2 == 0, "EKFSLAM.update: landmark lenght not even"
+        numLmk = (eta[0] - 3) // 2
+        assert (
+            eta.shape[0] - 3) % 2 == 0, "EKFSLAM.update: landmark length not even"
 
         if numLmk > 0:
             # Prediction and innovation covariance
-            zpred = self.predict(eta, P, z)  # TODO
+            zpred = self.h(eta)  # TODO
             H = self.H(eta)  # TODO
 
             # Here you can use simply np.kron (a bit slow) to form the big (very big in VP after a while) R,
@@ -488,7 +489,7 @@ class EKFSLAM:
                 z_new_inds[1::2] = is_new_lmk
                 z_new = z[z_new_inds]
                 # TODO, add new landmarks.
-                etaupd, Pupd = self.add_landmarks(eta, P, z_new)
+                etaupd, Pupd = self.add_landmarks(etaupd, Pupd, z_new)
 
         assert np.allclose(
             Pupd, Pupd.T), "EKFSLAM.update: Pupd must be symmetric"
