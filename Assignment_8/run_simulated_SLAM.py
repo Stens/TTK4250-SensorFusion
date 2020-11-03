@@ -1,4 +1,6 @@
 # %% Imports
+from plotting import ellipse
+from EKFSLAM import EKFSLAM
 from typing import List, Optional
 
 from scipy.io import loadmat
@@ -72,14 +74,10 @@ except Exception as e:
     )
 
 
-
-from EKFSLAM import EKFSLAM
-from plotting import ellipse
-
 # %% Load data
 simSLAM_ws = loadmat("simulatedSLAM")
 
-## NB: this is a MATLAB cell, so needs to "double index" to get out the measurements of a time step k:
+# NB: this is a MATLAB cell, so needs to "double index" to get out the measurements of a time step k:
 #
 # ex:
 #
@@ -96,14 +94,13 @@ K = len(z)
 M = len(landmarks)
 
 # %% Initilize
-Q = # TODO
-R = # TODO
+Q = np.diag([0.520e-1**2*np.ones(2), 0.012**2])  # TODO
+R = np.diag([4e-2**2, 4e-2**2])  # TODO
 
 doAsso = True
 
-JCBBalphas = np.array(
-    # TODO,
-)  # first is for joint compatibility, second is individual
+# first is for joint compatibility, second is individual
+JCBBalphas = np.array((0.000001, chi2.sf(4.5**2, 2)))
 # these can have a large effect on runtime either through the number of landmarks created
 # or by the size of the association search space.
 
@@ -124,8 +121,10 @@ NEESes = np.zeros((K, 3))
 # For consistency testing
 alpha = 0.05
 
+print(type(eta_pred))
 # init
-eta_pred[0] = poseGT[0]  # we start at the correct position for reference
+# we start at the correct position for reference
+eta_pred[0] = np.array(poseGT[0])
 P_pred[0] = np.zeros((3, 3))  # we also say that we are 100% sure about that
 
 # %% Set up plotting
@@ -143,10 +142,12 @@ print("starting sim (" + str(N) + " iterations)")
 
 for k, z_k in tqdm(enumerate(z[:N])):
 
-    eta_hat[k], P_hat[k], NIS[k], a[k] = # TODO update
+    eta_hat[k], P_hat[k], NIS[k], a[k] = slam.update(
+        eta_pred, P_pred, z_k)  # TODO update
 
     if k < K - 1:
-        eta_pred[k + 1], P_pred[k + 1] = # TODO predict
+        eta_pred[k + 1], P_pred[k +
+                                1] = slam.predict(eta_hat, P_hat, odometry)  # TODO predict
 
     assert (
         eta_hat[k].shape[0] == P_hat[k].shape[0]
@@ -163,7 +164,8 @@ for k, z_k in tqdm(enumerate(z[:N])):
         NISnorm[k] = 1
         CInorm[k].fill(1)
 
-    NEESes[k] = # TODO, use provided function slam.NEESes
+    # TODO, use provided function slam.NEESes
+    NEESes[k] = slam.NEESes(eta_hat, P_hat, poseGT[k])
 
     if doAssoPlot and k > 0:
         axAsso.clear()
@@ -171,12 +173,15 @@ for k, z_k in tqdm(enumerate(z[:N])):
         zpred = slam.h(eta_pred[k]).reshape(-1, 2)
         axAsso.scatter(z_k[:, 0], z_k[:, 1], label="z")
         axAsso.scatter(zpred[:, 0], zpred[:, 1], label="zpred")
-        xcoords = np.block([[z_k[a[k] > -1, 0]], [zpred[a[k][a[k] > -1], 0]]]).T
-        ycoords = np.block([[z_k[a[k] > -1, 1]], [zpred[a[k][a[k] > -1], 1]]]).T
+        xcoords = np.block(
+            [[z_k[a[k] > -1, 0]], [zpred[a[k][a[k] > -1], 0]]]).T
+        ycoords = np.block(
+            [[z_k[a[k] > -1, 1]], [zpred[a[k][a[k] > -1], 1]]]).T
         for x, y in zip(xcoords, ycoords):
             axAsso.plot(x, y, lw=3, c="r")
         axAsso.legend()
-        axAsso.set_title(f"k = {k}, {np.count_nonzero(a[k] > -1)} associations")
+        axAsso.set_title(
+            f"k = {k}, {np.count_nonzero(a[k] > -1)} associations")
         plt.draw()
         plt.pause(0.001)
 
@@ -220,18 +225,19 @@ ax2.grid()
 # %% Consistency
 
 # NIS
-insideCI = (CInorm[:N,0] <= NISnorm[:N]) * (NISnorm[:N] <= CInorm[:N,1])
+insideCI = (CInorm[:N, 0] <= NISnorm[:N]) * (NISnorm[:N] <= CInorm[:N, 1])
 
 fig3, ax3 = plt.subplots(num=3, clear=True)
-ax3.plot(CInorm[:N,0], '--')
-ax3.plot(CInorm[:N,1], '--')
+ax3.plot(CInorm[:N, 0], '--')
+ax3.plot(CInorm[:N, 1], '--')
 ax3.plot(NISnorm[:N], lw=0.5)
 
 ax3.set_title(f'NIS, {insideCI.mean()*100}% inside CI')
 
 # NEES
 
-fig4, ax4 = plt.subplots(nrows=3, ncols=1, figsize=(7, 5), num=4, clear=True, sharex=True)
+fig4, ax4 = plt.subplots(nrows=3, ncols=1, figsize=(
+    7, 5), num=4, clear=True, sharex=True)
 tags = ['all', 'pos', 'heading']
 dfs = [3, 2, 1]
 
@@ -254,10 +260,11 @@ fig4.tight_layout()
 ylabels = ['m', 'deg']
 scalings = np.array([1, 180/np.pi])
 
-fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(7, 5), num=5, clear=True, sharex=True)
+fig5, ax5 = plt.subplots(nrows=2, ncols=1, figsize=(
+    7, 5), num=5, clear=True, sharex=True)
 
-pos_err = np.linalg.norm(pose_est[:N,:2] - poseGT[:N,:2], axis=1)
-heading_err = np.abs(utils.wrapToPi(pose_est[:N,2] - poseGT[:N,2]))
+pos_err = np.linalg.norm(pose_est[:N, :2] - poseGT[:N, :2], axis=1)
+heading_err = np.abs(utils.wrapToPi(pose_est[:N, 2] - poseGT[:N, 2]))
 
 errs = np.vstack((pos_err, heading_err))
 
