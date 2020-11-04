@@ -91,18 +91,18 @@ odometry = simSLAM_ws["odometry"].T
 poseGT = simSLAM_ws["poseGT"].T
 
 K = len(z)
+K = 60
 M = len(landmarks)
 
 # %% Initilize
-Q = (0.520e-1**2)*np.eye(3)
+Q = (0.520e-10**2)*np.eye(3)
 Q[2, 2] = 0.012**2
-R = np.diag([4e-2**2, 4e-2**2])  # TODO
-print("Q ===============")
-print(Q)
+R = np.diag([4e-4**2, 2e-4**2])  # TODO
+
 doAsso = True
 
 # first is for joint compatibility, second is individual
-JCBBalphas = np.array((0.000001, chi2.sf(4.5**2, 2)))
+JCBBalphas = np.array((0.0001, chi2.sf(4.5**2, 2)))
 # these can have a large effect on runtime either through the number of landmarks created
 # or by the size of the association search space.
 
@@ -123,7 +123,6 @@ NEESes = np.zeros((K, 3))
 # For consistency testing
 alpha = 0.05
 
-print(type(eta_pred))
 # init
 # we start at the correct position for reference
 eta_pred[0] = np.array(poseGT[0])
@@ -148,7 +147,6 @@ for k, z_k in tqdm(enumerate(z[:N])):
         eta_pred[k], P_pred[k], z_k)  # TODO update
 
     if k < K - 1:
-        print("kjørr")
         eta_pred[k + 1], P_pred[k +
                                 1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # TODO predict
 
