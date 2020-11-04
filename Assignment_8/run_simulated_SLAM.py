@@ -95,7 +95,7 @@ K = 60
 M = len(landmarks)
 
 # %% Initilize
-Q = (0.520e-10**2)*np.eye(3)
+Q = (0.520e-2**2)*np.eye(3)
 Q[2, 2] = 0.012**2
 R = np.diag([4e-4**2, 2e-4**2])  # TODO
 
