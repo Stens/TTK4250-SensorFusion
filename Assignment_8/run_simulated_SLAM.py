@@ -91,13 +91,12 @@ odometry = simSLAM_ws["odometry"].T
 poseGT = simSLAM_ws["poseGT"].T
 
 K = len(z)
-K = 60
 M = len(landmarks)
 
 # %% Initilize
-Q = (0.520e-2**2)*np.eye(3)
+Q = (0.520e-1**2)*np.eye(3)
 Q[2, 2] = 0.012**2
-R = np.diag([4e-4**2, 2e-4**2])  # TODO
+R = np.diag([4e-2**2, 2e-2**2])  # TODO
 
 doAsso = True
 
@@ -147,6 +146,7 @@ for k, z_k in tqdm(enumerate(z[:N])):
         eta_pred[k], P_pred[k], z_k)  # TODO update
 
     if k < K - 1:
+        P_hat_k = P_hat[k].copy()
         eta_pred[k + 1], P_pred[k +
                                 1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # TODO predict
 
@@ -156,7 +156,7 @@ for k, z_k in tqdm(enumerate(z[:N])):
 
     num_asso = np.count_nonzero(a[k] > -1)
 
-    CI[k] = chi2.interval(alpha, 2 * num_asso)
+    CI[k] = chi2.interval(1 -alpha, 2 * num_asso)
 
     if num_asso > 0:
         NISnorm[k] = NIS[k] / (2 * num_asso)
@@ -243,7 +243,7 @@ tags = ['all', 'pos', 'heading']
 dfs = [3, 2, 1]
 
 for ax, tag, NEES, df in zip(ax4, tags, NEESes.T, dfs):
-    CI_NEES = chi2.interval(alpha, df)
+    CI_NEES = chi2.interval(1-alpha, df)
     ax.plot(np.full(N, CI_NEES[0]), '--')
     ax.plot(np.full(N, CI_NEES[1]), '--')
     ax.plot(NEES[:N], lw=0.5)
