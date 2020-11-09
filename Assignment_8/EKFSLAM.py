@@ -220,54 +220,39 @@ class EKFSLAM:
         np.ndarray, shape=(2 * #landmarks, 3 + 2 * #landmarks)
             the jacobian of h wrt. eta.
         """
+
         # extract states and map
-        x = eta[:3]
-        # reshape map (2, #landmarks), m[j] is the jth landmark
-        m = eta[3:].reshape(-1, 2).T
+        x = eta[0:3]
+        ## reshape map (2, #landmarks), m[j] is the jth landmark
+        m = eta[3:].reshape((-1, 2)).T
 
         numM = m.shape[1]
 
         Rot = rotmat2d(x[2])
-
-        # TODO, relative position of landmark to robot in world frame. m - rho that appears in (11.15) and (11.16)
-        delta_m = m - eta[0:2, None]
-
-        # TODO, (2, #measurements), each measured position in cartesian coordinates like
-        zc = delta_m - (Rot@self.sensor_offset).reshape(2, 1)
-
         Rpihalf = rotmat2d(np.pi / 2)
 
-        # In what follows you can be clever and avoid making this for all the landmarks you _know_
-        # you will not detect (the maximum range should be available from the data).
-        # But keep it simple to begin with.
+        # Relative position of landmark to robot in world frame:
+        delta_m = m - x[:2].reshape((2,1))
 
-        # Allocate H and set submatrices as memory views into H
-        # You may or may not want to do this like this
-        # TODO, see eq (11.15), (11.16), (11.17)
+        zc =  (delta_m.T - Rot @ self.sensor_offset).T # (2, #measurements), each measured position in cartesian coordinates like
+        # [x coordinates;
+        #  y coordinates]
+
         H = np.zeros((2 * numM, 3 + 2 * numM))
-        Hx = H[:, :3]  # slice view, setting elements of Hx will set H as well
-        Hm = H[:, 3:]  # slice view, setting elements of Hm will set H as well
 
-        # proposed way is to go through landmarks one by one
-        # preallocate and update this for some speed gain if looping
-        jac_z_cb = -np.eye(2, 3)  # TODO: bruk denne
-        for i in range(numM):  # But this whole loop can be vectorized
-            ind = 2 * i  # starting postion of the ith landmark into H
-            # the inds slice for the ith landmark into H
-            zr = la.norm(zc[:, i])
-            inds = slice(ind, ind + 2)
-            jac_z_cb[:, 2] = -Rpihalf@delta_m[:, i]
-            firstrow = np.array([zc[:, i].T/zr])@jac_z_cb
-            secondrow = np.array(
-                [zc[:, i].T @ Rpihalf.T / zr**2])@jac_z_cb
-            Hx[ind] = firstrow
-            Hx[ind+1] = secondrow
+        z = np.zeros((numM,1))
+        ones = np.ones((numM,1))
+        Hx_tops = -np.concatenate(((1/la.norm(zc, axis=0) * delta_m).T, z), axis=1)
+        Hx_bottoms = np.concatenate(((1/la.norm(zc, axis=0)**2 * delta_m).T @ Rpihalf, -ones), axis=1)
+        Hx = np.concatenate((Hx_tops, Hx_bottoms), axis=1)
+        Hx = Hx.reshape(-1,3)
 
-            Hm[inds, inds] = -Hx[inds, :2]
+        Hm = -Hx[:,:2]
+        Hm = Hm.reshape(numM,-1,2)
+        
+        H[:,:3] = Hx
+        H[:,3:] = la.block_diag(*Hm)
 
-            # TODO: Set H or Hx and Hm here
-
-        # TODO: You can set some assertions here to make sure that some of the structure in H is correct
         return H
 
     def add_landmarks(
@@ -419,7 +404,6 @@ class EKFSLAM:
         Tuple[np.ndarray, np.ndarray, float, np.ndarray]
             [description]
         """
-        print("P shape:", P.shape)
         numLmk = int((eta.shape[0] - 3) // 2)
         assert (
             eta.shape[0] - 3) % 2 == 0, "EKFSLAM.update: landmark length not even"
