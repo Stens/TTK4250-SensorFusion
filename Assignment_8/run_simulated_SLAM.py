@@ -90,18 +90,19 @@ landmarks = simSLAM_ws["landmarks"].T
 odometry = simSLAM_ws["odometry"].T
 poseGT = simSLAM_ws["poseGT"].T
 
+
 K = len(z)
 M = len(landmarks)
 
 # %% Initilize
-Q = (0.520e-1**2)*np.eye(3)
-Q[2, 2] = 0.012**2
-R = np.diag([4e-2**2, 2e-2**2])  # TODO
+Q = (4.5e-2**2)*np.eye(3)
+Q[2, 2] = 5.7e-3**2
+R = np.diag([5.2e-2**2, 2.15e-2**2])  # TODO
 
 doAsso = True
 
 # first is for joint compatibility, second is individual
-JCBBalphas = np.array((0.0001, chi2.sf(4.5**2, 2)))
+JCBBalphas = np.array((1e-3, 1e-5))
 # these can have a large effect on runtime either through the number of landmarks created
 # or by the size of the association search space.
 
@@ -131,7 +132,7 @@ P_pred[0] = np.zeros((3, 3))  # we also say that we are 100% sure about that
 # plotting
 
 doAssoPlot = False
-playMovie = True
+playMovie = False
 if doAssoPlot:
     figAsso, axAsso = plt.subplots(num=1, clear=True)
 
