@@ -106,19 +106,20 @@ b = 0.5  # laser distance to the left of center
 
 car = Car(L, H, a, b)
 
-sigmas = [0.0520e-1**2, 0.0520e-1**2, 0.012**2]
+sigmas = [4.2e-2, 5.20e-2, 1e-2]
 CorrCoeff = np.array([[1, 0, 0], [0, 1, 0.9], [0, 0.9, 1]])
 Q = np.diag(sigmas) @ CorrCoeff @ np.diag(sigmas)
 
-R = np.diag([4e-2**2, 2e-2**2])
+R = np.diag([4e-2, 4e-2])**2
 
 # first is for joint compatibility, second is individual
-JCBBalphas = np.array((10e-10, 10e-5))
+JCBBalphas = np.array((1e-3, 3e-15))
 
 sensorOffset = np.array([car.a + car.L, car.b])
 doAsso = True
 
-slam = EKFSLAM(Q, R, do_asso=doAsso, alphas=JCBBalphas, sensor_offset=sensorOffset)
+slam = EKFSLAM(Q, R, do_asso=doAsso, alphas=JCBBalphas,
+               sensor_offset=sensorOffset)
 
 # For consistency testing
 alpha = 0.05
@@ -132,7 +133,8 @@ CI = np.zeros((mK, 2))
 CInorm = np.zeros((mK, 2))
 
 # Initialize state
-eta = np.array([Lo_m[0], La_m[1], 36 * np.pi / 180]) # you might want to tweak these for a good reference
+# you might want to tweak these for a good reference
+eta = np.array([Lo_m[0], La_m[1], 36 * np.pi / 180])
 P = np.zeros((3, 3))
 
 mk_first = 1  # first seems to be a bit off in timing
@@ -140,7 +142,7 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = 10000 # K
+N = 10000  # K
 
 doPlot = False
 
@@ -174,13 +176,14 @@ for k in tqdm(range(N)):
         if dt < 0:  # avoid assertions as they can be optimized avay?
             raise ValueError("negative time increment")
 
-        t = timeLsr[mk]  # ? reset time to this laser time for next post predict
+        # ? reset time to this laser time for next post predict
+        t = timeLsr[mk]
         odo = odometry(speed[k + 1], steering[k + 1], dt, car)
-        eta, P = slam.predict(eta, P, odos[k])  # TODO predict
+        eta, P = slam.predict(eta, P.copy(), odos[k])  # TODO predict
 
         z = detectTrees(LASER[mk])
         eta, P, NIS[mk], a[mk] = slam.update(
-            eta, P, z) # TODO update
+            eta, P, z)  # TODO update
 
         num_asso = np.count_nonzero(a[mk] > -1)
 
