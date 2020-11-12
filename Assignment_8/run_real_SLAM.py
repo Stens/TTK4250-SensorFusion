@@ -106,14 +106,14 @@ b = 0.5  # laser distance to the left of center
 
 car = Car(L, H, a, b)
 
-sigmas = [4.2e-2, 5.20e-2, 1e-2]
+sigmas = [3.2e-2, 1.2e-2, 5e-3]
 CorrCoeff = np.array([[1, 0, 0], [0, 1, 0.9], [0, 0.9, 1]])
 Q = np.diag(sigmas) @ CorrCoeff @ np.diag(sigmas)
 
-R = np.diag([4e-2, 4e-2])**2
+R = np.diag([6e-2, 2e-2])**2
 
 # first is for joint compatibility, second is individual
-JCBBalphas = np.array((1e-3, 3e-15))
+JCBBalphas = np.array([1e-4, 2e-6])
 
 sensorOffset = np.array([car.a + car.L, car.b])
 doAsso = True
@@ -142,7 +142,7 @@ mk = mk_first
 t = timeOdo[0]
 
 # %%  run
-N = 10000  # K
+N = K  # K
 
 doPlot = False
 
@@ -263,6 +263,30 @@ ax6.plot(*xupd[mk_first:mk, :2].T)
 ax6.set(
     title=f"Steps {k}, laser scans {mk-1}, landmarks {len(eta[3:])//2},\nmeasurements {z.shape[0]}, num new = {np.sum(a[mk] == -1)}"
 )
-plt.show()
+# %%
+# Rotating gps
 
+gpsXY = [Lo_m, La_m]
+Lo_m_lim = Lo_m[timeGps < timeOdo[N - 1]]
+La_m_lim = La_m[timeGps < timeOdo[N - 1]]
+theta = -0.22*np.pi/12
+trans = np.zeros((2, len(Lo_m_lim)))
+trans[0, :] = 2
+trans[1, :] = 10
+gps_rot = np.zeros((len(Lo_m_lim), 2))
+
+for i in range(len(Lo_m_lim)):
+    gps_now = np.array([Lo_m_lim[i], La_m_lim[i]])
+    gps_rot[i] = gps_now@rotmat2d(theta)
+
+
+gps_true = np.add(gps_rot.T, trans)
+fig7, ax7 = plt.subplots(num=7, clear=True)
+ax7.scatter(
+    gps_true[0, :], gps_true[1, :]
+)
+ax7.plot(*xupd[mk_first:mk, :2].T)
+ax7.scatter(*eta[3:].reshape(-1, 2).T, color="r", marker="x")
+
+plt.show()
 # %%
