@@ -31,7 +31,7 @@ print(f"matplotlib config file: {matplotlib.matplotlib_fname()}")
 print(f"matplotlib config dir: {matplotlib.get_configdir()}")
 plt.close("all")
 
-# try to set separate window ploting
+# try to set separate windoƒw ploting
 if "inline" in matplotlib.get_backend():
     print("Plotting is set to inline at the moment:", end=" ")
 
@@ -147,10 +147,9 @@ for k, z_k in tqdm(enumerate(z[:N])):
         eta_pred[k], P_pred[k], z_k)  # TODO update
 
     if k < K - 1:
-        P_hat_k = P_hat[k].copy()
         eta_pred[k + 1], P_pred[k +
                                 1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # TODO predict
-
+   
     assert (
         eta_hat[k].shape[0] == P_hat[k].shape[0]
     ), "dimensions of mean and covariance do not match"
@@ -323,3 +322,8 @@ if playMovie:
 
 plt.show()
 # %%
+
+y = np.array([np.count_nonzero(a[k] > -1) for k in np.arange(N)])
+print(y)
+plt.plot(np.arange(N), y)
+plt.show()
