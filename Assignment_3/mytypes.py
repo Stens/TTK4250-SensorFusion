@@ -1,7 +1,7 @@
 import sys
 from typing import TYPE_CHECKING, Any, List, Sequence, Tuple, Union, overload
 
-# %% Taken from https://github.com/numpy/numpy/tree/master/numpy/typing
+#  Taken from https://github.com/numpy/numpy/tree/master/numpy/typing
 from numpy import dtype, ndarray
 
 if sys.version_info >= (3, 8):
@@ -20,7 +20,7 @@ _Shape = Tuple[int, ...]
 # Anything that can be coerced to a shape tuple
 _ShapeLike = Union[int, Sequence[int]]
 
-_DtypeLikeNested = Any  # TODO: wait for support for recursive types
+_DtypeLikeNested = Any  # : wait for support for recursive types
 
 if TYPE_CHECKING or HAVE_PROTOCOL:
     # Mandatory keys
@@ -64,4 +64,3 @@ else:
 
 ArrayLike = Union[bool, int, float, complex, _SupportsArray, Sequence]
 
-# %%

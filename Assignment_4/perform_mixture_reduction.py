@@ -5,7 +5,6 @@ from scipy.stats import multivariate_normal
 from mixturereduction import gaussian_mixture_moments
 
 # %% setup and show initial
-# TODO: fill in values
 mus = np.array([1, 1, 1]).reshape(3, 1)
 sigmas = np.array([1, 1, 1]).reshape(
     3, 1, 1

@@ -97,7 +97,7 @@ M = len(landmarks)
 # %% Initilize
 Q = (4.5e-2**2)*np.eye(3)
 Q[2, 2] = 5.7e-3**2
-R = np.diag([5.2e-2**2, 2.15e-2**2])  # TODO
+R = np.diag([5.2e-2**2, 2.15e-2**2])
 
 doAsso = True
 
@@ -144,12 +144,12 @@ print("starting sim (" + str(N) + " iterations)")
 for k, z_k in tqdm(enumerate(z[:N])):
 
     eta_hat[k], P_hat[k], NIS[k], a[k] = slam.update(
-        eta_pred[k], P_pred[k], z_k)  # TODO update
+        eta_pred[k], P_pred[k], z_k)  # update
 
     if k < K - 1:
         P_hat_k = P_hat[k].copy()
         eta_pred[k + 1], P_pred[k +
-                                1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # TODO predict
+                                1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # predict
 
     assert (
         eta_hat[k].shape[0] == P_hat[k].shape[0]
@@ -166,7 +166,6 @@ for k, z_k in tqdm(enumerate(z[:N])):
         NISnorm[k] = 1
         CInorm[k].fill(1)
 
-    # TODO, use provided function slam.NEESes
     NEESes[k] = slam.NEESes(eta_hat[k][:3], P_hat[k][:3, :3], poseGT[k])
 
     if doAssoPlot and k > 0:

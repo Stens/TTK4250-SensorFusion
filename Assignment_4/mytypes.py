@@ -20,7 +20,7 @@ _Shape = Tuple[int, ...]
 # Anything that can be coerced to a shape tuple
 _ShapeLike = Union[int, Sequence[int]]
 
-_DtypeLikeNested = Any  # TODO: wait for support for recursive types
+_DtypeLikeNested = Any 
 
 if TYPE_CHECKING or HAVE_PROTOCOL:
     # Mandatory keys

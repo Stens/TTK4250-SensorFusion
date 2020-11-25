@@ -129,9 +129,9 @@ RMSE_upd = np.sqrt((err_upd ** 2).mean(axis=1)) # same as above
 
 # measurement consistency
 NIS = np.array([st["NIS"] for st in stats])
-ANIS =  NIS.mean(axis=0) # TODO, hint mean
+ANIS =  NIS.mean(axis=0) 
 df = 2
-confprob = 0.95  # TODO number to use for confidence interval
+confprob = 0.95  
 CINIS = np.array(scipy.stats.chi2.interval(confprob, df))
 CIANIS = np.array(scipy.stats.chi2.interval(confprob, df * K)) / K
 print(f"ANIS={ANIS} with CIANIS={CIANIS}")
@@ -250,7 +250,7 @@ ekf_filters.append(ekf.EKF(CV, measurement_model))
 # ekf_filters.append(ekf.EKF(CVh, measurement_model)) 
 ekf_filters.append(ekf.EKF(CT, measurement_model))
 # ekf_filters.append ...
-init_state = { # TODO, pick something reasonoable
+init_state = {
     "weight": np.array([0.8, 0.2]),  # Mode probs: optional
     "mean": Xgt[0,:],
     "cov": np.diag([1, 1, 1, 1, 1]) ** 2,
@@ -285,7 +285,7 @@ NEESes_comb_upd = (
 NEES_upd, NEESes_upd = (np.array(n) for n in zip(*NEESes_comb_upd))
 ANEES_upd = np.mean(NEES_upd, axis=0)
 df = 5
-confprob = 0.9  # TODO
+confprob = 0.9 
 CINEES = np.array(scipy.stats.chi2.interval(confprob, df))
 CIANEES = np.array(scipy.stats.chi2.interval(confprob, df * K)) / K
 print(f"ANIS={ANIS} and CIANEES={CIANIS}")
@@ -300,8 +300,8 @@ pos_RMSE = np.sqrt(
 vel_RMSE = np.sqrt(
     np.mean(vel_err ** 2)
 )  # not true RMSE (which is over monte carlo simulations)
-pos_peak_deviation = pos_err.max() # TODO
-vel_peak_deviation = vel_err.max()# TODO
+pos_peak_deviation = pos_err.max() 
+vel_peak_deviation = vel_err.max()
 
 # plot
 rmsestr = ", ".join(f"{num:.3f}" for num in (pos_RMSE, vel_RMSE))

@@ -220,7 +220,7 @@ class IMM(Generic[MT]):
         # THIS IS ONLY NEEDED FOR IMM-PDA. You can therefore wait if you prefer.
 
         mode_conditioned_ll = [f.loglikelihood(
-            z, immstate, sensor_state=sensor_state) for f in self.filters]  # TODO in for IMM-PDA
+            z, immstate, sensor_state=sensor_state) for f in self.filters]
 
         ll = logsumexp(np.log(immstate.weights) + mode_conditioned_ll, axis=0)
 
@@ -347,7 +347,7 @@ class IMM(Generic[MT]):
         mode probabilities: array_like
         components:
 
-        """  # TODO there are cases where MP unaltered can lead to trouble
+        """  # there are cases where MP unaltered can lead to trouble
 
         raise NotImplementedError(
             f"IMM do not know how to initialize a immstate from: {init}"

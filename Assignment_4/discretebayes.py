@@ -18,9 +18,9 @@ def discrete_bayes(
 ]:  # the new marginal and conditional: shapes=((m,), (m, n))
     """Swap which discrete variable is the marginal and conditional."""
 
-    joint = pr[:,None]*cond_pr # TODO P(X,Y) = P(Y|X)P(X)
+    joint = pr[:,None]*cond_pr # P(X,Y) = P(Y|X)P(X)
 
-    marginal = np.sum(joint, axis=0)# TODO p(X) = sum of all x for  P(X,Y)
+    marginal = np.sum(joint, axis=0) # p(X) = sum of all x for  P(X,Y)
 
     # Take care of rare cases of degenerate zero marginal,
     conditional = np.divide(joint, marginal[None], where=marginal[None] > 0,

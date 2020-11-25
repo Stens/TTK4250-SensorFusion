@@ -35,7 +35,6 @@ class CartesianPosition:
             sensor_state: Dict[str, Any] = None,
           ) -> np.ndarray:
         """Calculate the noise free measurement location at x in sensor_state."""
-        # TODO
         measurement_loc = np.array([
           [1, 0, 0, 0],
           [0, 1, 0, 0],

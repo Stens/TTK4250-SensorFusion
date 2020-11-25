@@ -92,7 +92,7 @@ except Exception as e:
 filename_to_load = "./task_real.mat"
 loaded_data = scipy.io.loadmat(filename_to_load)
 
-do_corrections = True  # TODO: set to false for the last task
+do_corrections = True  # set to false for the last task
 if do_corrections:
     S_a = loaded_data['S_a']
     S_g = loaded_data['S_g']
@@ -121,9 +121,9 @@ cont_acc_bias_driving_noise_std = 0.05e-3 * 9.81
 
 
 # Position and velocity measurement
-p_acc = 1e-16  # TODO
+p_acc = 1e-16  
 
-p_gyro = 1e-16  # TODO
+p_gyro = 1e-16  
 
 # %% Estimator
 eskf = ESKF(

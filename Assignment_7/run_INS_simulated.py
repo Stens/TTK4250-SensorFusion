@@ -134,7 +134,7 @@ eskf = ESKF(
     p_gyro,
     S_a=S_a,  # set the accelerometer correction matrix
     S_g=S_g,  # set the gyro correction matrix,
-    debug=False  # TODO: False to avoid expensive debug checks, can also be suppressed by calling 'python -O run_INS_simulated.py'
+    debug=False  # False to avoid expensive debug checks, can also be suppressed by calling 'python -O run_INS_simulated.py'
 )
 
 # %% Allocate
@@ -164,7 +164,7 @@ x_pred[0, 6] = 1
 # These have to be set reasonably to get good results
 P_pred[0][POS_IDX ** 2] = 1e-3 * np.eye(3)
 P_pred[0][VEL_IDX ** 2] = 1e-3 * np.eye(3)
-# TODO # error rotation vector (not quat)
+# error rotation vector (not quat)
 P_pred[0][ERR_ATT_IDX ** 2] = 1e-5 * np.eye(3)
 P_pred[0][ERR_ACC_BIAS_IDX ** 2] = 1e-2 * np.eye(3)
 P_pred[0][ERR_GYRO_BIAS_IDX ** 2] = 1e-6 * np.eye(3)
@@ -172,9 +172,9 @@ P_pred[0][ERR_GYRO_BIAS_IDX ** 2] = 1e-6 * np.eye(3)
 # %% Run estimation
 # run this file with 'python -O run_INS_simulated.py' to turn of assertions and get about 8/5 speed increase for longer runs
 
-# TODO: choose a small value to begin with (500?), and gradually increase as you OK results
+# choose a small value to begin with (500?), and gradually increase as you OK results
 N: int = steps
-doGNSS: bool = True  # TODO: Set this to False if you want to check that the predictions make sense over reasonable time lenghts
+doGNSS: bool = True  # Set this to False if you want to check that the predictions make sense over reasonable time lenghts
 
 GNSSk: int = 0  # keep track of current step in GNSS measurements
 for k in tqdm(range(N)):
@@ -262,7 +262,7 @@ fig2.suptitle("States estimates")
 
 # state error plots
 fig3, axs3 = plt.subplots(5, 1, num=3, clear=True)
-# TODO use this in legends
+# use this in legends
 delta_x_RMSE = np.sqrt(np.mean(delta_x[:N] ** 2, axis=0))
 axs3[0].plot(t, delta_x[:N, POS_IDX])
 axs3[0].set(ylabel="NED position error [m]")

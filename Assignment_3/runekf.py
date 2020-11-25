@@ -44,7 +44,7 @@ except Exception as e:
 # %% get and plot the data
 data_path = 'data_for_ekf.mat'
 
-# TODO: choose this for the last task
+#: choose this for the last task
 usePregen = False  # choose between own generated data and pre generated
 
 if usePregen:
@@ -61,7 +61,7 @@ else:
     x0 = np.array([0, 0, 1, 1, 0])
     P0 = np.diag([50, 50, 10, 10, np.pi/4]) ** 2
 
-    # model parameters to sample from # TODO for toying around
+    # model parameters to sample from #  for toying around
     sigma_a_true = 0.25
     sigma_omega_true = np.pi/15
     sigma_z_true = 3
@@ -90,8 +90,8 @@ ax2.set_ylabel('turn rate')
 # %% a: tune by hand and comment
 
 # set parameters
-sigma_a = 2 # TODO
-sigma_z = 3.2  # TODO
+sigma_a = 2 
+sigma_z = 3.2  
 
 # create the model and estimator object
 dynmod = dynamicmodels.WhitenoiseAccelleration(sigma_a)
@@ -100,17 +100,15 @@ ekf_filter = ekf.EKF(dynmod, measmod)
 print(ekf_filter)  # make use of the @dataclass automatic repr
 
 # initialize mean and covariance
-# TODO: ArrayLike (list, np. array, tuple, ...) with 4 elements
+# ArrayLike (list, np. array, tuple, ...) with 4 elements
 x_bar_init = np.array([Xgt[0,0], Xgt[0,1], 0, 0])
-P_bar_init = np.diag([1.5,1.5,0,0]) # TODO: ArrayLike with 4 x 4 elements, hint: np.diag
+P_bar_init = np.diag([1.5,1.5,0,0]) # ArrayLike with 4 x 4 elements, hint: np.diag
 init_ekfstate = ekf.GaussParams(x_bar_init, P_bar_init)
 
 # estimate
-# TODO
 ekfpred_list, ekfupd_list = ekf_filter.estimate_sequence(Z, init_ekfstate, Ts)
 
 # get statistics:
-# TODO: see that you sort of understand what this does
 stats = ekf_filter.performance_stats_sequence(
     K, Z=Z, ekfpred_list=ekfpred_list, ekfupd_list=ekfupd_list, X_true=Xgt[:, :4],
     norm_idxs=[[0, 1], [2, 3]], norms=[2, 2]
@@ -121,9 +119,9 @@ print(f'keys in stats is {stats.dtype.names}')
 # %% Calculate average performance metrics
 # stats['dists_pred'] contains 2 norm of position and speed for each time index
 # same for 'dists_upd'
-# TODO: square stats['dists_pred'] -> take its mean over time -> take square root
-RMSE_pred = np.sqrt(np.mean((stats['dists_pred'])**2, axis=0))  # TODO
-RMSE_upd = np.sqrt(np.mean((stats['dists_upd'])**2,axis=0))  # TODO same for 'dists_upd'
+# square stats['dists_pred'] -> take its mean over time -> take square root
+RMSE_pred = np.sqrt(np.mean((stats['dists_pred'])**2, axis=0)) 
+RMSE_upd = np.sqrt(np.mean((stats['dists_upd'])**2,axis=0))  # same for 'dists_upd'
 
 fig3, ax3 = plt.subplots(num=3, clear=True)
 
@@ -135,14 +133,14 @@ ax3.set_title(
 
 # %% Task 5 b and c
 
-# % parameters for the parameter grid
-# TODO: pick reasonable values for grid search
+#  parameters for the parameter grid
+# pick reasonable values for grid search
 # n_vals = 20  # is Ok, try lower to begin with for more speed (20*20*1000 = 400 000 KF steps)
 n_vals = 10
-sigma_a_low = 0.01 # TODO
-sigma_a_high = 5 # TODO
-sigma_z_low = 0.01# TODO
-sigma_z_high = 5 # TODO
+sigma_a_low = 0.01 
+sigma_a_high = 5 
+sigma_z_low = 0.01
+sigma_z_high = 5 
 
 # % set the grid on logscale(not mandatory)
 sigma_a_list = np.logspace(
@@ -155,23 +153,22 @@ sigma_z_list = np.logspace(
 dtype = stats.dtype  # assumes the last cell has been run without faults
 stats_array = np.empty((n_vals, n_vals, K), dtype=dtype)
 # %% run through the grid and estimate
-# ? Should be more or less a copy of the above
+# Should be more or less a copy of the above
 for i, sigma_a in enumerate(sigma_a_list):
-    dynmod = dynamicmodels.WhitenoiseAccelleration(sigma_a)  # TODO
+    dynmod = dynamicmodels.WhitenoiseAccelleration(sigma_a)  
     for j, sigma_z in enumerate(sigma_z_list):
-        measmod = measurementmodels.CartesianPosition(sigma_z)  # TODO
-        ekf_filter = ekf.EKF(dynmod, measmod)  # TODO
+        measmod = measurementmodels.CartesianPosition(sigma_z)  
+        ekf_filter = ekf.EKF(dynmod, measmod)  
 
-        ekfpred_list, ekfupd_list = ekf_filter.estimate_sequence(Z, init_ekfstate, Ts)  # TODO
+        ekfpred_list, ekfupd_list = ekf_filter.estimate_sequence(Z, init_ekfstate, Ts)  
         stats = ekf_filter.performance_stats_sequence(
                             K, Z=Z, ekfpred_list=ekfpred_list, ekfupd_list=ekfupd_list, X_true=Xgt[:, :4],
                             norm_idxs=[[0, 1], [2, 3]], norms=[2, 2])
 
-        stats_array[i, j] = stats  # TODO
+        stats_array[i, j] = stats  
 # %% calculate averages
 
 
-# TODO, remember to use axis argument, see eg. stats_array['dists_pred'].shape
 
 RMSE_pred = np.sqrt((stats_array['dists_pred']**2).mean(axis=2))
 RMSE_upd = np.sqrt((stats_array['dists_upd']**2).mean(axis=2))
@@ -180,8 +177,8 @@ ANEES_upd = stats_array['NEESupd'].mean(axis=2)
 ANIS = stats_array['NIS'].mean(axis=2)
 # %% find confidence regions for NIS and plot
 df = 2
-confprob = 0.9  # TODO number to use for confidence interval
-CINIS = np.array(scipy.stats.chi2.interval(confprob, K*df))/K# TODO confidence intervall for NIS, hint: scipy.stats.chi2.interval
+confprob = 0.9  # number to use for confidence interval
+CINIS = np.array(scipy.stats.chi2.interval(confprob, K*df))/K # confidence intervall for NIS, hint: scipy.stats.chi2.interval
 print(CINIS)
 
 # plot
@@ -198,8 +195,8 @@ ax4.set_zlim(0, 10)
 ax4.view_init(30, 20)
 # %% find confidence regions for NEES and plot
 df = 4
-confprob = 0.9  # TODO
-CINEES = np.array(scipy.stats.chi2.interval(confprob, K*df))/K  # TODO, not NIS now, but very similar
+confprob = 0.9 
+CINEES = np.array(scipy.stats.chi2.interval(confprob, K*df))/K  # not NIS now, but very similar
 print(CINEES)
 
 # plot

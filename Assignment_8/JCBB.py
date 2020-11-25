@@ -7,7 +7,7 @@ import utils
 
 chi2isf_cached = lru_cache(maxsize=None)(chi2.isf)
 
-# TODO: make sure a is 0-indexed
+# make sure a is 0-indexed
 def JCBB(z, zbar, S, alpha1, alpha2):
     assert len(z.shape) == 1, "z must be in one row in JCBB"
     assert z.shape[0] % 2 == 0, "z must be equal in x and y"

@@ -75,14 +75,10 @@ class WhitenoiseAccelleration:
         """
         Calculate the Ts time units transition Covariance.
         """
-        # TODO
-        # Hint: sigma can be found as self.sigma, see variable declarations
-        # Note the @dataclass decorates this class to create an init function that takes
-        # sigma as a parameter, among other things.
         pnc_matrix = np.array([
           [(Ts**3)/3, 0, (Ts**2)/2, 0],
           [0, (Ts**3)/3, 0, (Ts**2)/2],
           [(Ts**2)/2, 0, Ts, 0],
           [0, (Ts**2)/2, 0, Ts]
         ]) * (self.sigma**2)
-        return pnc_matrix # @ x
+        return pnc_matrix 

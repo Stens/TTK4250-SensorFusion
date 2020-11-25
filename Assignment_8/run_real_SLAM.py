@@ -156,7 +156,7 @@ if doPlot:
     sh_Z = ax.scatter(np.nan, np.nan, c="b", marker=".")
 
 do_raw_prediction = True
-if do_raw_prediction:  # TODO: further processing such as plotting
+if do_raw_prediction:  # further processing such as plotting
     odos = np.zeros((K, 3))
     odox = np.zeros((K, 3))
     odox[0] = eta
@@ -170,7 +170,7 @@ for k in tqdm(range(N)):
         # Force P to symmetric: there are issues with long runs (>10000 steps)
         # seem like the prediction might be introducing some minor asymetries,
         # so best to force P symetric before update (where chol etc. is used).
-        # TODO: remove this for short debug runs in order to see if there are small errors
+        # remove this for short debug runs in order to see if there are small errors
         P = (P + P.T) / 2
         dt = timeLsr[mk] - t
         if dt < 0:  # avoid assertions as they can be optimized avay?
@@ -179,11 +179,11 @@ for k in tqdm(range(N)):
         # ? reset time to this laser time for next post predict
         t = timeLsr[mk]
         odo = odometry(speed[k + 1], steering[k + 1], dt, car)
-        eta, P = slam.predict(eta, P.copy(), odos[k])  # TODO predict
+        eta, P = slam.predict(eta, P.copy(), odos[k])  # predict
 
         z = detectTrees(LASER[mk])
         eta, P, NIS[mk], a[mk] = slam.update(
-            eta, P, z)  # TODO update
+            eta, P, z)  # update
 
         num_asso = np.count_nonzero(a[mk] > -1)
 
