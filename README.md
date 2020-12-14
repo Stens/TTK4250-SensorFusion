@@ -26,7 +26,9 @@ Similarly for assigment 2 a simulated and a real dataset was provided. Using an 
 For assignment 3 EKF-SLAM was used to create a map and estimate the pose of a moving car. The EKF-SLAM is not the best SLAM method for this dataset as the dataset is a bit too large making the computaions very timeconsuming. The data association used is also not the best in terms of performance. The shortcomings and possible improvemnts are disscused in the report.
 
 ![](reports/figures/aerial_track.png)
+
 *Aerial photo of the park along with the track*
+    
 ![](reports/figures/track_real.png)
 *The estimated track along with the landmarks*
 
