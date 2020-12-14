@@ -120,9 +120,9 @@ cont_acc_bias_driving_noise_std = 0.003
 p_std = np.array([0.3, 0.3, 0.5])  # Measurement noise
 R_GNSS = np.diag(p_std ** 2)
 
-p_acc = 1e-12
+p_acc = 1e-16
 
-p_gyro = 1e-8
+p_gyro = 1e-16
 
 # %% Estimator
 eskf = ESKF(
@@ -174,7 +174,8 @@ P_pred[0][ERR_GYRO_BIAS_IDX ** 2] = 1e-6 * np.eye(3)
 
 # choose a small value to begin with (500?), and gradually increase as you OK results
 N: int = steps
-doGNSS: bool = True  # Set this to False if you want to check that the predictions make sense over reasonable time lenghts
+# Set this to False if you want to check that the predictions make sense over reasonable time lenghts
+doGNSS: bool = True
 
 GNSSk: int = 0  # keep track of current step in GNSS measurements
 for k in tqdm(range(N)):
