@@ -1,5 +1,5 @@
 # TTK4250-SensorFusion
-Assignments for the coures TTK4250-Sensor Fusion at NTNU 2020. The assignments 6 to 8 was done together with Leik Lima-Eriksen as they were graded. The main topics of the assignments target tracking, inertial navigation and SLAM. Together with an exam the assignment 
+Assignments for the coures TTK4250-Sensor Fusion at NTNU 2020. The graded assignments was done together with Leik Lima-Eriksen. The main topics of the assignments target tracking, inertial navigation and SLAM. Together with an exam the assignments part of the grade. 
 The reports can be found [here](./reports) 
 
 ## Assigment 1: IMM-PDAF
