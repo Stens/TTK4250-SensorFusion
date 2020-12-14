@@ -163,7 +163,7 @@ if do_raw_prediction:  # further processing such as plotting
 
     for k in range(min(N, K - 1)):
         odos[k + 1] = odometry(speed[k + 1], steering[k + 1], 0.025, car)
-        odox[k + 1], _ = slam.predict(odox[k], P, odos[k + 1])
+        odox[k + 1], _ = slam.predict(odox[k], P.copy(), odos[k + 1])
 
 for k in tqdm(range(N)):
     if mk < mK - 1 and timeLsr[mk] <= timeOdo[k + 1]:
@@ -226,7 +226,7 @@ for k in tqdm(range(N)):
         dt = timeOdo[k + 1] - t
         t = timeOdo[k + 1]
         odo = odometry(speed[k + 1], steering[k + 1], dt, car)
-        eta, P = slam.predict(eta, P, odo)
+        eta, P = slam.predict(eta, P.copy(), odo)
 
 # %% Consistency
 
@@ -266,27 +266,19 @@ ax6.set(
 # %%
 # Rotating gps
 
-gpsXY = [Lo_m, La_m]
 Lo_m_lim = Lo_m[timeGps < timeOdo[N - 1]]
 La_m_lim = La_m[timeGps < timeOdo[N - 1]]
-theta = -0.22*np.pi/12
-trans = np.zeros((2, len(Lo_m_lim)))
-trans[0, :] = 2
-trans[1, :] = 10
-gps_rot = np.zeros((len(Lo_m_lim), 2))
-
-for i in range(len(Lo_m_lim)):
-    gps_now = np.array([Lo_m_lim[i], La_m_lim[i]])
-    gps_rot[i] = gps_now@rotmat2d(theta)
 
 
-gps_true = np.add(gps_rot.T, trans)
 fig7, ax7 = plt.subplots(num=7, clear=True)
 ax7.scatter(
-    gps_true[0, :], gps_true[1, :]
+    Lo_m_lim, La_m_lim,
+    label="GPS"
 )
-ax7.plot(*xupd[mk_first:mk, :2].T)
-ax7.scatter(*eta[3:].reshape(-1, 2).T, color="r", marker="x")
+points = xupd[mk_first:mk, :2].T
+ax7.plot(points[0] - 2, points[1] - 4, label="Est.")
 
+ax7.scatter(*eta[3:].reshape(-1, 2).T, color="r", marker="x", label="Landmark")
+plt.legend()
 plt.show()
 # %%

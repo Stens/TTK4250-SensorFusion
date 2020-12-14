@@ -31,7 +31,7 @@ print(f"matplotlib config file: {matplotlib.matplotlib_fname()}")
 print(f"matplotlib config dir: {matplotlib.get_configdir()}")
 plt.close("all")
 
-# try to set separate window ploting
+# try to set separate windoƒw ploting
 if "inline" in matplotlib.get_backend():
     print("Plotting is set to inline at the moment:", end=" ")
 
@@ -147,7 +147,6 @@ for k, z_k in tqdm(enumerate(z[:N])):
         eta_pred[k], P_pred[k], z_k)  # update
 
     if k < K - 1:
-        P_hat_k = P_hat[k].copy()
         eta_pred[k + 1], P_pred[k +
                                 1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])  # predict
 
@@ -157,7 +156,7 @@ for k, z_k in tqdm(enumerate(z[:N])):
 
     num_asso = np.count_nonzero(a[k] > -1)
 
-    CI[k] = chi2.interval(1 -alpha, 2 * num_asso)
+    CI[k] = chi2.interval(1 - alpha, 2 * num_asso)
 
     if num_asso > 0:
         NISnorm[k] = NIS[k] / (2 * num_asso)
@@ -322,3 +321,8 @@ if playMovie:
 
 plt.show()
 # %%
+
+y = np.array([np.count_nonzero(a[k] > -1) for k in np.arange(N)])
+print(y)
+plt.plot(np.arange(N), y)
+plt.show()
